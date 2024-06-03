@@ -33,14 +33,15 @@ class SnakeGame:
             return self.screen, 0, self.done
 
         prev_head = self.snake[-1]
-        self.snake.append(prev_head + self.direction)
-        if self.snake[-1] in self.snake[:-1]:
+        new_head = (prev_head[0] + self.direction[0], prev_head[1] + self.direction[1])
+        self.snake.append(new_head)
+        if new_head in self.snake[:-1]:
             self.done = True
             reward = self.collision_penalty
-        elif self.snake[-1] in [(0, 0), (0, self.width - 1), (self.height - 1, 0), (self.height - 1, self.width - 1)]:
+        elif new_head[0] < 0 or new_head[0] >= self.height or new_head[1] < 0 or new_head[1] >= self.width:
             self.done = True
             reward = self.collision_penalty
-        elif self.snake[-1] == self.food:
+        elif new_head == self.food:
             self.spawn_food()
             reward = self.food_reward
         else:
@@ -58,13 +59,13 @@ class SnakeGame:
 
     def get_action_direction(self, action):
         if action == 0:
-            return (0, -1)
-        elif action == 1:
-            return (0, 1)
-        elif action == 2:
             return (-1, 0)
-        else:
+        elif action == 1:
             return (1, 0)
+        elif action == 2:
+            return (0, -1)
+        else:
+            return (0, 1)
 
     def spawn_food(self):
         x, y = np.random.randint(0, self.height, 2)
