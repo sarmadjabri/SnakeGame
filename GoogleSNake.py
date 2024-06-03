@@ -11,8 +11,8 @@ red = (213, 50, 80)
 green = (0, 255, 0)
 blue = (50, 153, 213)
 
-dis_width = 1000
-dis_height = 1000
+dis_width = 500
+dis_height = 500
 
 dis = pygame.display.set_mode((dis_width, dis_height))
 pygame.display.set_caption('Snake Game')
@@ -20,7 +20,7 @@ pygame.display.set_caption('Snake Game')
 clock = pygame.time.Clock()
 
 snake_block = 30
-snake_speed = 20
+snake_speed = 15
 
 font_style = pygame.font.SysFont("bahnschrift", 25)
 score_font = pygame.font.SysFont("comicsansms", 35)
@@ -78,18 +78,37 @@ def gameLoop():
             if event.type == pygame.QUIT:
                 game_over = True
             if event.type == pygame.KEYDOWN:
-                if event.key == pygame.K_LEFT:
+               
+                global rightkey
+                rightkey = True
+                if event.key == pygame.K_LEFT  and leftkey == True:
                     x1_change = -snake_block
                     y1_change = 0
-                elif event.key == pygame.K_RIGHT:
+                    leftkey = True
+                    upkey = True
+                    rightkey = False
+                   
+                elif event.key == pygame.K_RIGHT and rightkey == True:
                     x1_change = snake_block
                     y1_change = 0
-                elif event.key == pygame.K_UP:
+                    leftkey = False
+                    downkey = True
+                    upkey = True
+                    rightkey = True
+                elif event.key == pygame.K_UP and upkey == True:
                     y1_change = -snake_block
                     x1_change = 0
-                elif event.key == pygame.K_DOWN:
+                    leftkey = True
+                    downkey = False
+                    upkey = True
+                    rightkey = True
+                elif event.key == pygame.K_DOWN and downkey == True:
                     y1_change = snake_block
                     x1_change = 0
+                    leftkey = True
+                    downkey = True
+                    upkey = False
+                    rightkey = True
 
         if x1 >= dis_width or x1 < 0 or y1 >= dis_height or y1 < 0:
             game_close = True
