@@ -6,8 +6,7 @@ import torch.nn as nn
 import torch.optim as optim
 import torch.nn.functional as F
 import matplotlib.pyplot as plt
-
-# Define the environment
+# Define za envioronment
 class SnakeGame:
     def __init__(self, width=80, height=80, food_reward=10, collision_penalty=-10):
         self.width = width
@@ -19,7 +18,6 @@ class SnakeGame:
         self.direction = (0, 1)
         self.done = False
         self.food = None
-
     def reset(self):
         self.screen = np.zeros((self.height, self.width), dtype=np.uint8)
         self.snake = [(self.height // 2, self.width // 2)]
@@ -27,7 +25,6 @@ class SnakeGame:
         self.done = False
         self.spawn_food()
         return self.screen
-
     def step(self, action):
         if self.done:
             return self.screen, 0, self.done
@@ -45,17 +42,8 @@ class SnakeGame:
             self.spawn_food()
             reward = self.food_reward
         else:
-            self.snake.pop(0)
-            reward = 0
-
-        self.screen = np.zeros((self.height, self.width), dtype=np.uint8)
-        for x, y in self.snake:
-            self.screen[x, y] = 1
-        self.screen[self.food] = 2
-
-        self.direction = self.get_action_direction(action)
-
-        return self.screen, reward, self.done
+          -58,13 +59,13
+        #def step(self, action):
 
     def get_action_direction(self, action):
         if action == 0:
@@ -72,19 +60,16 @@ class SnakeGame:
         while (x, y) in self.snake:
             x, y = np.random.randint(0, self.height, 2)
         self.food = (x, y)
-
 # Define the deep learning neural network
 class DQN(nn.Module):
     def __init__(self, state_dim, action_dim):
         super(DQN, self).__init__()
         self.fc1 = nn.Linear(state_dim, 64)
         self.fc2 = nn.Linear(64, action_dim)
-
     def forward(self, x):
         x = F.relu(self.fc1(x))
         x = self.fc2(x)
         return x
-
 class Agent:
     def __init__(self, state_dim, action_dim, batch_size, gamma, epsilon, epsilon_min, epsilon_decay, target_update):
         self.state_dim = state_dim
@@ -99,17 +84,14 @@ class Agent:
         self.model = DQN(state_dim, action_dim)
         self.target_model = DQN(state_dim, action_dim)
         self.optimizer = optim.Adam(self.model.parameters())
-
     def act(self, state):
         if np.random.rand() <= self.epsilon:
             return np.random.randint(self.action_dim)
         else:
             state = torch.tensor(state, dtype=torch.float32)
             return torch.argmax(self.model(state)).item()
-
     def remember(self, state, action, reward, next_state, done):
         self.memory.append((state, action, reward, next_state, done))
-
     def replay(self):
         if len(self.memory) < self.batch_size:
             return
@@ -120,28 +102,20 @@ class Agent:
         rewards = torch.tensor(rewards, dtype=torch.float32)
         next_states = torch.tensor(next_states, dtype=torch.float32)
         dones = torch.tensor(dones, dtype=torch.float32)
-
         q_values = self.model(states)
         q_values = q_values.gather(1, actions.unsqueeze(1)).squeeze(1)
-
         next_q_values = self.target_model(next_states)
         next_q_values, _ = next_q_values.max(dim=1)
-
         targets = rewards + self.gamma * next_q_values * (1 - dones)
-
         loss = F.mse_loss(q_values, targets)
-
         self.optimizer.zero_grad()
         loss.backward()
         self.optimizer.step()
-
         if self.epsilon > self.epsilon_min:
             self.epsilon *= self.epsilon_decay
-
         if len(self.memory) % self.target_update == 0:
             self.target_model.load_state_dict(self.model.state_dict())
-
-# Define the training loop
+# Train loop
 def train(env, agent, n_episodes=1000):
     scores = []
     for episode in range(n_episodes):
@@ -159,13 +133,11 @@ def train(env, agent, n_episodes=1000):
         if episode % 100 == 0:
             print(f"Episode {episode}: Score {score}")
     return scores
-
-# Define the main function
+# Define the main
 def main():
     # Set up the environment
     pygame.init()
     env = SnakeGame()
-
     # Set up the deep learning neural network
     state_dim = env.screen.shape[0] * env.screen.shape[1]
     action_dim = 4
@@ -176,10 +148,8 @@ def main():
     epsilon_decay = 0.995
     target_update = 100
     agent = Agent(state_dim, action_dim, batch_size, gamma, epsilon, epsilon_min, epsilon_decay, target_update)
-
     # Train the agent
     scores = train(env, agent, n_episodes=1000)
-
     # Plot the scores
     plt.plot(scores)
     plt.show()
