@@ -1,146 +1,140 @@
-import pygame
-import time
+import numpy as np
 import random
+from keras.models import Sequential
+from keras.layers import Dense, Flatten
+from keras.optimizers import Adam
 
-pygame.init()
+class SnakeGame:
+    def __init__(self, width=10, height=10):
+        self.width = width
+        self.height = height
+        self.snake_position = [(0, 0)]
+        self.direction = (0, 1)
+        self.food_position = self._generate_food()
+        self.score = 0
 
-white = (255, 255, 255)
-yellow = (255, 255, 102)
-black = (0, 0, 0)
-red = (213, 50, 80)
-green = (0, 255, 0)
-blue = (50, 153, 213)
+    def _generate_food(self):
+        while True:
+            food_x = random.randint(0, self.width - 1)
+            food_y = random.randint(0, self.height - 1)
+            if (food_x, food_y) not in self.snake_position:
+                return (food_x, food_y)
 
-dis_width = 500
-dis_height = 500
+    def _get_state(self):
+        state = np.zeros((self.height, self.width))
+        for x, y in self.snake_position:
+            state[x % self.height, y % self.width] = 1
+        state[self.food_position[0] % self.height, self.food_position[1] % self.width] = 2
+        return state
 
-dis = pygame.display.set_mode((dis_width, dis_height))
-pygame.display.set_caption('Snake Game')
+    def step(self, action):
+        # Update snake direction
+        if action == 0:  # Up
+            self.direction = (0, -1)
+        elif action == 1:  # Down
+            self.direction = (0, 1)
+        elif action == 2:  # Left
+            self.direction = (-1, 0)
+        elif action == 3:  # Right
+            self.direction = (1, 0)
 
-clock = pygame.time.Clock()
+        # Move snake
+        head_x, head_y = self.snake_position[0]
+        new_head_x, new_head_y = (head_x + self.direction[0]) % self.width, (head_y + self.direction[1]) % self.height
+        self.snake_position.insert(0, (new_head_x, new_head_y))
 
-snake_block = 30
-snake_speed = 15
+        # Check for collision with wall or self
+        if (new_head_x < 0 or new_head_x >= self.width or
+                new_head_y < 0 or new_head_y >= self.height or
+                (new_head_x, new_head_y) in self.snake_position[1:]):
+            return self._get_state(), -10, True, {"score": self.score, "reward": -10}
+        # Check for food
+        if (new_head_x, new_head_y) == self.food_position:
+            self.food_position = self._generate_food()
+            self.score += 1
+            return self._get_state(), 10, False, {"score": self.score, "reward": 10}
+        else:
+            self.snake_position.pop()
+            return self._get_state(), 0, False, {"score": self.score, "reward": 0}
 
-font_style = pygame.font.SysFont("bahnschrift", 25)
-score_font = pygame.font.SysFont("comicsansms", 35)
+    def reset(self):
+        self.snake_position = [(0, 0)]
+        self.direction = (0, 1)
+        self.food_position = self._generate_food()
+        self.score = 0
+        return self._get_state()
 
-def draw_grid():
-    for i in range(0, dis_width, snake_block):
-        pygame.draw.line(dis, white, (i, 0), (i, dis_height))
-        pygame.draw.line(dis, white, (0, i), (dis_width, i))
+    def render(self):
+        state = self._get_state()
+        print(state)
 
-def Your_score(score):
-    value = score_font.render("Score: " + str(score), True, yellow)
-    dis.blit(value, [0, 0])
-def our_snake(snake_block, snake_List):
-    for x in snake_List:
-        pygame.draw.rect(dis, green, [x[0], x[1], snake_block, snake_block])
+class DQNAgent:
+    def __init__(self, state_size, action_size):
+        self.state_size = state_size
+        self.action_size = action_size
+        self.memory = []
+        self.gamma = 0.95
+        self.epsilon = 0.1  # Lower epsilon for more exploitation
+        self.epsilon_min = 0.01
+        self.epsilon_decay = 0.995
+        self.learning_rate = 0.001
+        self.model = self._build_model()
 
-def message(msg, color):
-    mesg = font_style.render(msg, True, color)
-    dis.blit(mesg, [dis_width / 6, dis_height / 3])
+    def _build_model(self):
+        model = Sequential()
+        model.add(Flatten(input_shape=(self.state_size, self.state_size)))
+        model.add(Dense(64, activation='relu'))
+        model.add(Dense(64, activation='relu'))
+        model.add(Dense(self.action_size, activation='linear'))
+        model.compile(loss='mse', optimizer=Adam(learning_rate=self.learning_rate))
+        return model
 
-def gameLoop():
-    game_over = False
-    game_close = False
+    def remember(self, state, action, reward, next_state, done):
+        self.memory.append((state, action, reward, next_state, done))
 
-    x1 = snake_block * 5
-    y1 = snake_block * 5
+    def act(self, state):
+        if np.random.rand() <= self.epsilon:
+            return random.randrange(self.action_size)
+        act_values = self.model.predict(state)
+        return np.argmax(act_values[0])
 
-    x1_change = 0
-    y1_change = 0
+    def replay(self, batch_size):
+        minibatch = random.sample(self.memory, batch_size)
+        for state, action, reward, next_state, done in minibatch:
+            target = reward
+            if not done:
+                target = reward + self.gamma * np.amax(self.model.predict(next_state)[0])
+            target_f = self.model.predict(state)
+            target_f[0][action] = target
+            self.model.fit(state, target_f, epochs=1, verbose=0)
+        if self.epsilon > self.epsilon_min:
+            self.epsilon *= self.epsilon_decay
 
-    snake_List = []
-    Length_of_snake = 1
+    def save(self, name):
+        self.model.save(name)
 
-    foodx = round(random.randrange(0, dis_width - snake_block) / 30.0) * 30.0
-    foody = round(random.randrange(0, dis_height - snake_block) / 30.0) * 30.0
+    def load(self, name):
+        self.model.load_weights(name)
 
-    while not game_over:
+if __name__ == "__main__":
+    game = SnakeGame()
+    agent = DQNAgent(state_size=10, action_size=4)
+    batch_size = 512  # Increased batch size
+    episodes = 100000000000
 
-        while game_close == True:
-            dis.fill(blue)
-            message("You Lost! Press C-Play Again or Q-Quit", red)
-            Your_score(Length_of_snake - 1)
-            draw_grid()
-            pygame.display.update()
-
-            for event in pygame.event.get():
-                if event.type == pygame.KEYDOWN:
-                    if event.key == pygame.K_q:
-                        game_over = True
-                        game_close = False
-                    if event.key == pygame.K_c:
-                        gameLoop()
-
-        for event in pygame.event.get():
-            if event.type == pygame.QUIT:
-                game_over = True
-            if event.type == pygame.KEYDOWN:
-               
-                global rightkey
-                rightkey = True
-                if event.key == pygame.K_LEFT  and leftkey == True:
-                    x1_change = -snake_block
-                    y1_change = 0
-                    leftkey = True
-                    upkey = True
-                    rightkey = False
-                   
-                elif event.key == pygame.K_RIGHT and rightkey == True:
-                    x1_change = snake_block
-                    y1_change = 0
-                    leftkey = False
-                    downkey = True
-                    upkey = True
-                    rightkey = True
-                elif event.key == pygame.K_UP and upkey == True:
-                    y1_change = -snake_block
-                    x1_change = 0
-                    leftkey = True
-                    downkey = False
-                    upkey = True
-                    rightkey = True
-                elif event.key == pygame.K_DOWN and downkey == True:
-                    y1_change = snake_block
-                    x1_change = 0
-                    leftkey = True
-                    downkey = True
-                    upkey = False
-                    rightkey = True
-
-        if x1 >= dis_width or x1 < 0 or y1 >= dis_height or y1 < 0:
-            game_close = True
-        x1 += x1_change
-        y1 += y1_change
-        dis.fill(black)
-        draw_grid()
-        pygame.draw.rect(dis, red, [foodx, foody, snake_block, snake_block])
-        snake_Head = []
-        snake_Head.append(x1)
-        snake_Head.append(y1)
-        snake_List.append(snake_Head)
-        if len(snake_List) > Length_of_snake:
-            del snake_List[0]
-
-        for x in snake_List[:-1]:
-            if x == snake_Head:
-                game_close = True
-
-        our_snake(snake_block, snake_List)
-        Your_score(Length_of_snake - 1)
-
-        pygame.display.update()
-
-        if x1 == foodx and y1 == foody:
-            foodx = round(random.randrange(0, dis_width - snake_block) / 30.0) * 30.0
-            foody = round(random.randrange(0, dis_height - snake_block) / 30.0) * 30.0
-            Length_of_snake += 1
-
-        clock.tick(snake_speed)
-
-    pygame.quit()
-    quit()
-
-gameLoop()
+    for episode in range(episodes):
+        state = game.reset()
+        state = state.reshape(1, 10, 10)
+        for time in range(1000):
+            action = agent.act(state)
+            next_state, reward, done, info = game.step(action)
+            print("Score: {}, Reward: {}".format(info["score"], info["reward"]))
+            next_state = next_state.reshape(1, 10, 10)
+            agent.remember(state, action, reward, next_state, done)
+            state = next_state
+            if done:
+                print("Episode {} finished after {} timesteps".format(episode, time))
+                break
+            if len(agent.memory) > batch_size:
+                agent.replay(batch_size)
+    agent.save("snake_weights.h5")
