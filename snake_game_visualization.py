@@ -1,159 +1,156 @@
-import sys
-import pygame
 import numpy as np
-import torch
-import torch.nn as nn
-import torch.optim as optim
-import torch.nn.functional as F
+import random
+from keras.models import Sequential
+from keras.layers import Dense, Flatten
+from keras.optimizers import Adam
 import matplotlib.pyplot as plt
-# Define za envioronment
+import time
+
 class SnakeGame:
-    def __init__(self, width=80, height=80, food_reward=10, collision_penalty=-10):
+    def __init__(self, width=10, height=10):
         self.width = width
         self.height = height
-        self.food_reward = food_reward
-        self.collision_penalty = collision_penalty
-        self.screen = np.zeros((height, width), dtype=np.uint8)
-        self.snake = [(height // 2, width // 2)]
+        self.snake_position = [(0, 0)]
         self.direction = (0, 1)
-        self.done = False
-        self.food = None
-    def reset(self):
-        self.screen = np.zeros((self.height, self.width), dtype=np.uint8)
-        self.snake = [(self.height // 2, self.width // 2)]
-        self.direction = (0, 1)
-        self.done = False
-        self.spawn_food()
-        return self.screen
+        self.food_position = self._generate_food()
+        self.score = 0
+
+    def _generate_food(self):
+        while True:
+            food_x = random.randint(0, self.width - 1)
+            food_y = random.randint(0, self.height - 1)
+            if (food_x, food_y) not in self.snake_position:
+                return (food_x, food_y)
+
+    def _get_state(self):
+        state = np.zeros((self.height, self.width))
+        for x, y in self.snake_position:
+            state[x % self.height, y % self.width] = 1
+        state[self.food_position[0] % self.height, self.food_position[1] % self.width] = 2
+        return state
+
     def step(self, action):
-        if self.done:
-            return self.screen, 0, self.done
+        if action == 0:  # Up
+            self.direction = (0, -1)
+        elif action == 1:  # Down
+            self.direction = (0, 1)
+        elif action == 2:  # Left
+            self.direction = (-1, 0)
+        elif action == 3:  # Right
+            self.direction = (1, 0)
 
-        prev_head = self.snake[-1]
-        new_head = (prev_head[0] + self.direction[0], prev_head[1] + self.direction[1])
-        self.snake.append(new_head)
-        if new_head in self.snake[:-1]:
-            self.done = True
-            reward = self.collision_penalty
-        elif new_head[0] < 0 or new_head[0] >= self.height or new_head[1] < 0 or new_head[1] >= self.width:
-            self.done = True
-            reward = self.collision_penalty
-        elif new_head == self.food:
-            self.spawn_food()
-            reward = self.food_reward
+        # Move snake
+        head_x, head_y = self.snake_position[0]
+        new_head_x, new_head_y = (head_x + self.direction[0]) % self.width, (head_y + self.direction[1]) % self.height
+        self.snake_position.insert(0, (new_head_x, new_head_y))
+
+        # Check for collision with wall or self
+        if (new_head_x < 0 or new_head_x >= self.width or
+                new_head_y < 0 or new_head_y >= self.height or
+                (new_head_x, new_head_y) in self.snake_position[1:]):
+            return self._get_state(), -10, True, {"score": self.score, "reward": -10}
+        # Check for food
+        if (new_head_x, new_head_y) == self.food_position:
+            self.food_position = self._generate_food()
+            self.score += 1
+            return self._get_state(), 10, False, {"score": self.score, "reward": 10}
         else:
-          -58,13 +59,13
-        #def step(self, action):
+            # Reward for moving closer to food
+            food_distance = abs(new_head_x - self.food_position[0]) + abs(new_head_y - self.food_position[1])
+            previous_distance = abs(self.snake_position[0][0] - self.food_position[0]) + abs(self.snake_position[0][1] - self.food_position[1])
+            if food_distance < previous_distance:
+                reward = 0.1
+            else:
+                reward = -0.1
+            self.snake_position.pop()  # Remove the tail
+            return self._get_state(), reward, False, {"score": self.score, "reward": reward}
 
-    def get_action_direction(self, action):
-        if action == 0:
-            return (-1, 0)
-        elif action == 1:
-            return (1, 0)
-        elif action == 2:
-            return (0, -1)
-        else:
-            return (0, 1)
+    def reset(self):
+        self.snake_position = [(0, 0)]
+        self.direction = (0, 1)
+        self.food_position = self._generate_food()
+        self.score = 0
+        return self._get_state()
 
-    def spawn_food(self):
-        x, y = np.random.randint(0, self.height, 2)
-        while (x, y) in self.snake:
-            x, y = np.random.randint(0, self.height, 2)
-        self.food = (x, y)
-# Define the deep learning neural network
-class DQN(nn.Module):
-    def __init__(self, state_dim, action_dim):
-        super(DQN, self).__init__()
-        self.fc1 = nn.Linear(state_dim, 64)
-        self.fc2 = nn.Linear(64, action_dim)
-    def forward(self, x):
-        x = F.relu(self.fc1(x))
-        x = self.fc2(x)
-        return x
-class Agent:
-    def __init__(self, state_dim, action_dim, batch_size, gamma, epsilon, epsilon_min, epsilon_decay, target_update):
-        self.state_dim = state_dim
-        self.action_dim = action_dim
-        self.batch_size = batch_size
-        self.gamma = gamma
-        self.epsilon = epsilon
-        self.epsilon_min = epsilon_min
-        self.epsilon_decay = epsilon_decay
-        self.target_update = target_update
+    def render(self):
+        state = self._get_state()
+        plt.imshow(state, cmap='hot', interpolation='nearest')
+        plt.draw()
+        plt.pause(0.1)
+        plt.clf()
+
+class DQNAgent:
+    def __init__(self, state_size, action_size):
+        self.state_size = state_size
+        self.action_size = action_size
         self.memory = []
-        self.model = DQN(state_dim, action_dim)
-        self.target_model = DQN(state_dim, action_dim)
-        self.optimizer = optim.Adam(self.model.parameters())
-    def act(self, state):
-        if np.random.rand() <= self.epsilon:
-            return np.random.randint(self.action_dim)
-        else:
-            state = torch.tensor(state, dtype=torch.float32)
-            return torch.argmax(self.model(state)).item()
+        self.gamma = 0.95
+        self.epsilon = 0.5  # Lower epsilon for more exploitation
+        self.epsilon_min = 0.01
+        self.epsilon_decay = 0.995
+        self.learning_rate = 0.001
+        self.model = self._build_model()
+
+    def _build_model(self):
+        model = Sequential()
+        model.add(Flatten(input_shape=(self.state_size, self.state_size)))
+        model.add(Dense(64, activation='relu'))
+        model.add(Dense(64, activation='relu'))
+        model.add(Dense(self.action_size, activation='linear'))
+        model.compile(loss='mse', optimizer=Adam(learning_rate=self.learning_rate))
+        return model
+
     def remember(self, state, action, reward, next_state, done):
         self.memory.append((state, action, reward, next_state, done))
-    def replay(self):
-        if len(self.memory) < self.batch_size:
-            return
-        samples = np.random.choice(len(self.memory), self.batch_size)
-        states, actions, rewards, next_states, dones = zip(*[self.memory[i] for i in samples])
-        states = torch.tensor(states, dtype=torch.float32)
-        actions = torch.tensor(actions, dtype=torch.long)
-        rewards = torch.tensor(rewards, dtype=torch.float32)
-        next_states = torch.tensor(next_states, dtype=torch.float32)
-        dones = torch.tensor(dones, dtype=torch.float32)
-        q_values = self.model(states)
-        q_values = q_values.gather(1, actions.unsqueeze(1)).squeeze(1)
-        next_q_values = self.target_model(next_states)
-        next_q_values, _ = next_q_values.max(dim=1)
-        targets = rewards + self.gamma * next_q_values * (1 - dones)
-        loss = F.mse_loss(q_values, targets)
-        self.optimizer.zero_grad()
-        loss.backward()
-        self.optimizer.step()
+
+    def act(self, state):
+        if np.random.rand() <= self.epsilon:
+            return random.randrange(self.action_size)
+        act_values = self.model.predict(state)
+        return np.argmax(act_values[0])
+
+    def replay(self, batch_size):
+        minibatch = random.sample(self.memory, batch_size)
+        for state, action, reward, next_state, done in minibatch:
+            target = reward
+            if not done:
+                target = reward + self.gamma * np.amax(self.model.predict(next_state)[0])
+            target_f = self.model.predict(state)
+            target_f[0][action] = target
+            self.model.fit(state, target_f, epochs=1, verbose=0)
         if self.epsilon > self.epsilon_min:
             self.epsilon *= self.epsilon_decay
-        if len(self.memory) % self.target_update == 0:
-            self.target_model.load_state_dict(self.model.state_dict())
-# Train loop
-def train(env, agent, n_episodes=1000):
-    scores = []
-    for episode in range(n_episodes):
-        state = env.reset()
-        score = 0
-        done = False
-        while not done:
-            action = agent.act(state.flatten())
-            next_state, reward, done = env.step(action)
-            agent.remember(state.flatten(), action, reward, next_state.flatten(), done)
-            agent.replay()
-            state = next_state
-            score += reward
-        scores.append(score)
-        if episode % 100 == 0:
-            print(f"Episode {episode}: Score {score}")
-    return scores
-# Define the main
-def main():
-    # Set up the environment
-    pygame.init()
-    env = SnakeGame()
-    # Set up the deep learning neural network
-    state_dim = env.screen.shape[0] * env.screen.shape[1]
-    action_dim = 4
-    batch_size = 32
-    gamma = 0.99
-    epsilon = 1.0
-    epsilon_min = 0.01
-    epsilon_decay = 0.995
-    target_update = 100
-    agent = Agent(state_dim, action_dim, batch_size, gamma, epsilon, epsilon_min, epsilon_decay, target_update)
-    # Train the agent
-    scores = train(env, agent, n_episodes=1000)
-    # Plot the scores
-    plt.plot(scores)
-    plt.show()
 
-# Run the main function
+    def save(self, name):
+        self.model.save(name)
+
+    def load(self, name):
+        self.model.load_weights(name)
+
 if __name__ == "__main__":
-    main()
+    game = SnakeGame()
+    agent = DQNAgent(state_size=10, action_size=4)
+    batch_size = 1024  # Increased batch size
+    episodes = 100000000000
+
+    plt.ion()
+    for episode in range(episodes):
+        state = game.reset()
+        state = state.reshape(1, 10, 10)
+        for time in range(1000):
+            action = agent.act(state)
+            next_state, reward, done, info = game.step(action)
+            print("Score: {}, Reward: {}".format(info["score"], info["reward"]))
+            next_state = next_state.reshape(1, 10, 10)
+            agent.remember(state, action, reward, next_state, done)
+            state = next_state
+            game.render()
+            time.sleep(0.1)  # Add a delay to see the game
+            if done:
+                print("Episode {} finished after {} timesteps".format(episode, time))
+                break
+            if len(agent.memory) > batch_size:
+                agent.replay(batch_size)
+    agent.save("snake_weights.h5")
+    plt.ioff()
+    plt.show()
