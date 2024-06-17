@@ -53,7 +53,7 @@ class SnakeGame:
             self.score += 1
             return self._get_state(), 10, False, {"score": self.score, "reward": 10}
         else:
-            # Reward for moving closer to food
+            # Reward for going to food
             food_distance = abs(new_head_x - self.food_position[0]) + abs(new_head_y - self.food_position[1])
             previous_distance = abs(self.snake_position[0][0] - self.food_position[0]) + abs(self.snake_position[0][1] - self.food_position[1])
             if food_distance < previous_distance:
