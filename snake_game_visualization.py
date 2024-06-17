@@ -74,10 +74,10 @@ class SnakeGame:
 
     def render(self):
         state = self._get_state()
+        plt.clf()
         plt.imshow(state, cmap='hot', interpolation='nearest')
         plt.draw()
         plt.pause(0.1)
-        plt.clf()
 
 class DQNAgent:
     def __init__(self, state_size, action_size):
@@ -85,7 +85,7 @@ class DQNAgent:
         self.action_size = action_size
         self.memory = []
         self.gamma = 0.95
-        self.epsilon = 0.5  # Lower epsilon for more exploitation
+        self.epsilon = 0.5  # Lower epsilon for more exploitation # Higher epsilon for more exploration
         self.epsilon_min = 0.01
         self.epsilon_decay = 0.995
         self.learning_rate = 0.001
@@ -128,12 +128,12 @@ class DQNAgent:
         self.model.load_weights(name)
 
 if __name__ == "__main__":
+    plt.ion()
     game = SnakeGame()
     agent = DQNAgent(state_size=10, action_size=4)
-    batch_size = 1024  # Increased batch size
-    episodes = 100000000000
+    batch_size = 512  # Increased batch size
+    episodes = 10000
 
-    plt.ion()
     for episode in range(episodes):
         state = game.reset()
         state = state.reshape(1, 10, 10)
@@ -145,7 +145,6 @@ if __name__ == "__main__":
             agent.remember(state, action, reward, next_state, done)
             state = next_state
             game.render()
-            time.sleep(0.1)  # Add a delay to see the game
             if done:
                 print("Episode {} finished after {} timesteps".format(episode, time))
                 break
