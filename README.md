@@ -10,6 +10,10 @@ the neural network has a high epilison and a decay rate which enables the neural
 https://www.tensorflow.org/tutorials/reinforcement_learning/dqn
 
 
+
+In short, this Deep Q neural network has one input layer 2 hidden layers and 1 output layer. 
+
+
 https://keras.io
 
 https://docs.python.org
