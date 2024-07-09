@@ -126,7 +126,7 @@ if __name__ == "__main__":
     game = SnakeGame()
     agent = DQNAgent(state_size=10, action_size=4)
     batch_size = 512  # Increased batch size
-    episodes = 10000
+    episodes = 10000 #More run time for more attempts
 
     for episode in range(episodes):
         state = game.reset()
