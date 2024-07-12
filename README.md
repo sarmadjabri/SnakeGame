@@ -6,7 +6,7 @@ The algorithm to beat snake game is a DQN learning neural network of which plays
 The Deep Q neural network saves its attempts to disk(hopefully in due time).
 The project is using the keras library as it is relatively easy to use.
 
-https://www.tensorflow.org/tutorials/reinforcement_learning/dqn
+[https://www.tensorflow.org/tutorials/reinforcement_learning/dqn](https://www.tensorflow.org/)
 https://keras.io
 https://docs.python.org
 https://github.com/dennybritz/reinforcement-learning
