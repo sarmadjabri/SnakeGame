@@ -14,6 +14,7 @@ class SnakeGame:
         self.direction = (0, 1)
         self.food_position = self._generate_food()
         self.score = 0
+        self.previous_distance = self._calculate_distance()
 
     def _generate_food(self):
         while True:
@@ -29,6 +30,11 @@ class SnakeGame:
         state[self.food_position[0] % self.height, self.food_position[1] % self.width] = 2
         return state
 
+    def _calculate_distance(self):
+        head_x, head_y = self.snake_position[0]
+        food_x, food_y = self.food_position
+        return abs(head_x - food_x) + abs(head_y - food_y)
+
     def step(self, action):
         if action == 0:  # Up
             self.direction = (0, -1)
@@ -39,30 +45,27 @@ class SnakeGame:
         elif action == 3:  # Right
             self.direction = (1, 0)
 
-        # Move snake
+        # Move za snake
         head_x, head_y = self.snake_position[0]
         new_head_x, new_head_y = (head_x + self.direction[0]) % self.width, (head_y + self.direction[1]) % self.height
         self.snake_position.insert(0, (new_head_x, new_head_y))
 
-        # Check for collision with wall or self
+        # Check Collision
         if (new_head_x < 0 or new_head_x >= self.width or
                 new_head_y < 0 or new_head_y >= self.height or
                 (new_head_x, new_head_y) in self.snake_position[1:]):
             return self._get_state(), -10, True, {"score": self.score, "reward": -10}
-        # Check for food
+        # Check Food
         if (new_head_x, new_head_y) == self.food_position:
             self.food_position = self._generate_food()
             self.score += 1
             return self._get_state(), 10, False, {"score": self.score, "reward": 10}
         else:
-            # Reward for moving closer to food
-            food_distance = abs(new_head_x - self.food_position[0]) + abs(new_head_y - self.food_position[1])
-            previous_distance = abs(self.snake_position[0][0] - self.food_position[0]) + abs(self.snake_position[0][1] - self.food_position[1])
-            if food_distance < previous_distance:
-                reward = 0.1
-            else:
-                reward = -0.1
-            self.snake_position.pop()  # Remove the tail
+            # Reward Close to food
+            current_distance = self._calculate_distance()
+            reward = +0.1 if current_distance < self.previous_distance else -0.1
+            self.previous_distance = current_distance
+            self.snake_position.pop()  # Remove tail
             return self._get_state(), reward, False, {"score": self.score, "reward": reward}
 
     def reset(self):
@@ -70,11 +73,11 @@ class SnakeGame:
         self.direction = (0, 1)
         self.food_position = self._generate_food()
         self.score = 0
+        self.previous_distance = self._calculate_distance()
         return self._get_state()
 
     def render(self):
         state = self._get_state()
-        plt.clf()
         plt.imshow(state, cmap='hot', interpolation='nearest')
         plt.draw()
         plt.pause(0.1)
@@ -88,7 +91,7 @@ class DQNAgent:
         self.epsilon = 0.5  # Lower epsilon for more exploitation # Higher epsilon for more exploration
         self.epsilon_min = 0.01
         self.epsilon_decay = 0.995
-        self.learning_rate = 0.001
+        self.learning_rate = 0.0001
         self.model = self._build_model()
 
     def _build_model(self):
@@ -133,6 +136,7 @@ if __name__ == "__main__":
     agent = DQNAgent(state_size=10, action_size=4)
     batch_size = 512  # Increased batch size
     episodes = 10000
+    scores = []
 
     for episode in range(episodes):
         state = game.reset()
@@ -150,6 +154,11 @@ if __name__ == "__main__":
                 break
             if len(agent.memory) > batch_size:
                 agent.replay(batch_size)
+        scores.append(info["score"])
+        plt.clf()
+        plt.plot(scores)
+        plt.draw()
+        plt.pause(0.1)
     agent.save("snake_weights.h5")
     plt.ioff()
     plt.show()
