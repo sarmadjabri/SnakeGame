@@ -11,3 +11,6 @@ https://keras.io
 https://docs.python.org
 https://github.com/dennybritz/reinforcement-learning
 https://python-machinelearning.github.io
+
+
+Anyway feel free to run it but a good thing to watch out for is the amount of CPU it uses Thanks!
