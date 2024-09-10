@@ -88,7 +88,7 @@ class DQNAgent:
         self.action_size = action_size
         self.memory = []
         self.gamma = 0.95
-        self.epsilon = 0.5  # Lower epsilon for more exploitation # Higher epsilon for more exploration
+        self.epsilon = 0.4  # Lower epsilon for more exploitation # Higher epsilon for more exploration
         self.epsilon_min = 0.01
         self.epsilon_decay = 0.995
         self.learning_rate = 0.0001
@@ -134,8 +134,8 @@ if __name__ == "__main__":
     plt.ion()
     game = SnakeGame()
     agent = DQNAgent(state_size=10, action_size=4)
-    batch_size = 512  # Increased batch size
-    episodes = 10000
+    batch_size = 16  # Increased batch size
+    episodes = 10
     scores = []
 
     for episode in range(episodes):
