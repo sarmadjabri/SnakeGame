@@ -45,7 +45,7 @@ class SnakeGame:
         elif action == 3:  # Right
             self.direction = (1, 0)
 
-        # Move za snake
+        # Move the snake
         head_x, head_y = self.snake_position[0]
         new_head_x, new_head_y = (head_x + self.direction[0]) % self.width, (head_y + self.direction[1]) % self.height
         self.snake_position.insert(0, (new_head_x, new_head_y))
@@ -54,19 +54,34 @@ class SnakeGame:
         if (new_head_x < 0 or new_head_x >= self.width or
                 new_head_y < 0 or new_head_y >= self.height or
                 (new_head_x, new_head_y) in self.snake_position[1:]):
-            return self._get_state(), -10, True, {"score": self.score, "reward": -10}
+            reward = -10
+            done = True
         # Check Food
-        if (new_head_x, new_head_y) == self.food_position:
+        elif (new_head_x, new_head_y) == self.food_position:
             self.food_position = self._generate_food()
             self.score += 1
-            return self._get_state(), 10, False, {"score": self.score, "reward": 10}
+            reward = 10
+            done = False
         else:
-            # Reward Close to food
+            # Reward for moving closer to food
             current_distance = self._calculate_distance()
-            reward = +0.1 if current_distance < self.previous_distance else -0.1
+            reward = +1 if current_distance < self.previous_distance else -1
             self.previous_distance = current_distance
+
+            # Punish for collisions
+            if (new_head_x < 0 or new_head_x >= self.width or
+                    new_head_y < 0 or new_head_y >= self.height or
+                    (new_head_x, new_head_y) in self.snake_position[1:]):
+                reward -= 5
+
+            # Reward for eating food
+            if (new_head_x, new_head_y) == self.food_position:
+                reward += 10
+
+            done = False
             self.snake_position.pop()  # Remove tail
-            return self._get_state(), reward, False, {"score": self.score, "reward": reward}
+
+        return self._get_state(), reward, done, {"score": self.score, "reward": reward}
 
     def reset(self):
         self.snake_position = [(0, 0)]
@@ -88,7 +103,7 @@ class DQNAgent:
         self.action_size = action_size
         self.memory = []
         self.gamma = 0.95
-        self.epsilon = 0.4  # Lower epsilon for more exploitation # Higher epsilon for more exploration
+        self.epsilon = 1  # Lower epsilon for more exploitation # Higher epsilon for more exploration
         self.epsilon_min = 0.01
         self.epsilon_decay = 0.995
         self.learning_rate = 0.0001
@@ -134,8 +149,8 @@ if __name__ == "__main__":
     plt.ion()
     game = SnakeGame()
     agent = DQNAgent(state_size=10, action_size=4)
-    batch_size = 16  # Increased batch size
-    episodes = 10
+    batch_size = 2  # Increased batch size
+    episodes = 1
     scores = []
 
     for episode in range(episodes):
@@ -159,6 +174,5 @@ if __name__ == "__main__":
         plt.plot(scores)
         plt.draw()
         plt.pause(0.1)
-    agent.save("snake_weights.h5")
-    plt.ioff()
-    plt.show()
+plt.ioff()
+plt.show()
