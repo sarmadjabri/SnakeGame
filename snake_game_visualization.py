@@ -65,18 +65,17 @@ class SnakeGame:
         else:
             # Reward for moving closer to food
             current_distance = self._calculate_distance()
-            reward = +1 if current_distance < self.previous_distance else -1
+            if current_distance < self.previous_distance:
+                reward = 1  # Reward for moving closer to food
+            else:
+                reward = -1  # Punishment for moving away from food
             self.previous_distance = current_distance
 
             # Punish for collisions
             if (new_head_x < 0 or new_head_x >= self.width or
                     new_head_y < 0 or new_head_y >= self.height or
                     (new_head_x, new_head_y) in self.snake_position[1:]):
-                reward -= 5
-
-            # Reward for eating food
-            if (new_head_x, new_head_y) == self.food_position:
-                reward += 10
+                reward -= 5  # Punishment for collisions
 
             done = False
             self.snake_position.pop()  # Remove tail
