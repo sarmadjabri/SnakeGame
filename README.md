@@ -15,4 +15,7 @@ https://python-machinelearning.github.io
 
 Anyway feel free to run it but a good thing to watch out for is the amount of CPU it uses Thanks!
 
-I used ai to help a bit :( I understand i pwomise
+Please note that AI reccomended that I do a few things, the following are listed:
+  Making the reward function actually work after failed attempts
+  Food function
+  some graphing but it made mistakes
