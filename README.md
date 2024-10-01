@@ -14,3 +14,5 @@ https://python-machinelearning.github.io
 
 
 Anyway feel free to run it but a good thing to watch out for is the amount of CPU it uses Thanks!
+
+I used ai to help a bit :( I understand i pwomise
