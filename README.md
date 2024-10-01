@@ -19,3 +19,12 @@ Please note that AI reccomended that I do a few things, the following are listed
   Making the reward function actually work after failed attempts
   Food function
   some graphing but it made mistakes
+
+
+
+I dont know how to fix the models graphing to never stop. 
+
+Suspicions:
+Lack of memory
+the thing between my ears
+both
