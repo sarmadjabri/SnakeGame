@@ -25,6 +25,4 @@ Please note that AI reccomended that I do a few things, the following are listed
 I dont know how to fix the models graphing to never stop. 
 
 Suspicions:
-Lack of memory
-the thing between my ears
-both
+Lack of memory and the thing between my ears will be the reason or its both
