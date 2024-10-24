@@ -4,7 +4,6 @@ from keras.models import Sequential
 from keras.layers import Dense, Flatten
 from keras.optimizers import Adam
 import matplotlib.pyplot as plt
-import time
 
 class SnakeGame:
     def __init__(self, width=10, height=10):
@@ -54,31 +53,27 @@ class SnakeGame:
         if (new_head_x < 0 or new_head_x >= self.width or
                 new_head_y < 0 or new_head_y >= self.height or
                 (new_head_x, new_head_y) in self.snake_position[1:]):
-            reward = -10
+            reward = -50  # Increased penalty for collisions
             done = True
         # Check Food
         elif (new_head_x, new_head_y) == self.food_position:
             self.food_position = self._generate_food()
             self.score += 1
-            reward = 10
+            reward = 20  # Increased reward for eating food
             done = False
         else:
-            # Reward for moving closer to food
+            # Reward based on distance to food
             current_distance = self._calculate_distance()
-            if current_distance < self.previous_distance:
-                reward = 1  # Reward for moving closer to food
-            else:
-                reward = -1  # Punishment for moving away from food
-            self.previous_distance = current_distance
+            distance_reward = self.previous_distance - current_distance  # Positive if moving closer
+            reward = distance_reward
 
-            # Punish for collisions
-            if (new_head_x < 0 or new_head_x >= self.width or
-                    new_head_y < 0 or new_head_y >= self.height or
-                    (new_head_x, new_head_y) in self.snake_position[1:]):
-                reward -= 5  # Punishment for collisions
+            # Small penalty for each step taken to encourage efficiency
+            reward -= 1  # Slight negative reward for each move to promote quicker food collection
+
+            self.previous_distance = current_distance
+            self.snake_position.pop()  # Remove tail
 
             done = False
-            self.snake_position.pop()  # Remove tail
 
         return self._get_state(), reward, done, {"score": self.score, "reward": reward}
 
@@ -102,7 +97,7 @@ class DQNAgent:
         self.action_size = action_size
         self.memory = []
         self.gamma = 0.95
-        self.epsilon = 1  # Lower epsilon for more exploitation # Higher epsilon for more exploration
+        self.epsilon = 1  # Lower epsilon for more exploitation, higher for more exploration
         self.epsilon_min = 0.01
         self.epsilon_decay = 0.995
         self.learning_rate = 0.0001
@@ -173,5 +168,5 @@ if __name__ == "__main__":
         plt.plot(scores)
         plt.draw()
         plt.pause(0.1)
-plt.ioff()
-plt.show()
+    plt.ioff()
+    plt.show()
