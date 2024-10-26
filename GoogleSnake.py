@@ -43,16 +43,20 @@ class SnakeGame:
 
         # Check for collisions
         if self._is_collision(new_head_x, new_head_y):
-            return self._get_state(), -10, True, {"score": self.score, "reward": -10}
+            reward = -10
+            print(f"Collision! Reward: {reward}")  # Log the reward for collision
+            return self._get_state(), reward, True, {"score": self.score, "reward": reward}
 
         # Check for food
         if (new_head_x, new_head_y) == self.food_position:
             self.food_position = self._generate_food()
             self.score += 1
             reward = 10  # Reward for eating food
+            print(f"Ate food! Reward: {reward}")  # Log the reward for eating food
         else:
             current_distance = self._calculate_distance()
             reward = self._calculate_movement_reward(current_distance)
+            print(f"Moved. Reward: {reward}")  # Log the reward for movement
             self.snake_position.pop()  # Remove tail to maintain length
 
         self.previous_distance = current_distance
