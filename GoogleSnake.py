@@ -1,9 +1,9 @@
 import numpy as np
 import random
+import json
 from keras.models import Sequential
 from keras.layers import Dense, Flatten
 from keras.optimizers import Adam
-import matplotlib.pyplot as plt
 
 class SnakeGame:
     def __init__(self, width=10, height=10):
@@ -84,11 +84,6 @@ class SnakeGame:
         self.previous_distance = self._calculate_distance()
         return self._get_state()
 
-    def render(self):
-        plt.imshow(self._get_state(), cmap='hot', interpolation='nearest')
-        plt.draw()
-        plt.pause(0.1)
-
 class DQNAgent:
     def __init__(self, state_size, action_size):
         self.state_size = state_size
@@ -140,45 +135,29 @@ class DQNAgent:
         self.model.load_weights(name)
 
 if __name__ == "__main__":
-    plt.ion()
     game = SnakeGame()
     agent = DQNAgent(state_size=10, action_size=4)
     batch_size = 64
     episodes = 50
     scores = []
-    attempts = []  # Track attempts
 
     for episode in range(episodes):
         state = game.reset().reshape(1, 10, 10)
-        current_attempts = 0  # Reset attempts for each episode
         for time in range(1000):
             action = agent.act(state)
             next_state, reward, done, info = game.step(action)
-            current_attempts += 1  # Increment attempts for each action
-            print("Score: {}, Reward: {}".format(info["score"], info["reward"]))
             next_state = next_state.reshape(1, 10, 10)
             agent.remember(state, action, reward, next_state, done)
             state = next_state
-            game.render()
             if done:
                 print("Episode {} finished after {} timesteps".format(episode, time))
                 break
             if len(agent.memory) > batch_size:
                 agent.replay(batch_size)
         scores.append(info["score"])
-        attempts.append(current_attempts)  # Record the number of attempts
-        plt.clf()
-        plt.plot(scores, label='Scores')
-        plt.plot(attempts, label='Attempts', color='blue')
-        plt.title('Scores and Attempts Over Episodes')
-        plt.xlabel('Episode')
-        plt.ylabel('Scores / Attempts')
-        plt.legend()
-        plt.grid()
-        plt.draw()
-        plt.pause(0.1)
 
-    plt.ioff()
-    plt.show()
+    # Save scores to scores.json
+    with open("scores.json", "w") as f:
+        json.dump(scores, f)
+
     agent.save("snake_weights.h5")
-
