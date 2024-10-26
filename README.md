@@ -1,5 +1,5 @@
 # Snake-Game
-Recreation of google snake and an algorithm to beat google snake.
+Recreation of google snake and a Deep Q Neural network to beat google snake.
 Source code is not fully mine as I did get help from numerous websites.
 
 The algorithm to beat snake game is a DQN learning neural network of which plays the game several times and saves its attempts.
