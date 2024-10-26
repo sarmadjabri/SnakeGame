@@ -47,6 +47,9 @@ class SnakeGame:
             print(f"Collision! Reward: {reward}")  # Log the reward for collision
             return self._get_state(), reward, True, {"score": self.score, "reward": reward}
 
+        # Calculate the current distance to food
+        current_distance = self._calculate_distance()
+
         # Check for food
         if (new_head_x, new_head_y) == self.food_position:
             self.food_position = self._generate_food()
@@ -54,7 +57,6 @@ class SnakeGame:
             reward = 10  # Reward for eating food
             print(f"Ate food! Reward: {reward}")  # Log the reward for eating food
         else:
-            current_distance = self._calculate_distance()
             reward = self._calculate_movement_reward(current_distance)
             print(f"Moved. Reward: {reward}")  # Log the reward for movement
             self.snake_position.pop()  # Remove tail to maintain length
@@ -93,8 +95,8 @@ class DQNAgent:
         self.state_size = state_size
         self.action_size = action_size
         self.memory = []
-        self.gamma = 0.95
-        self.epsilon = 1.0
+        self.gamma = 0.95  # Discount rate
+        self.epsilon = 1.0  # Exploration rate
         self.epsilon_min = 0.01
         self.epsilon_decay = 0.995
         self.learning_rate = 0.0001
