@@ -5,6 +5,11 @@ from keras.models import Sequential
 from keras.layers import Dense, Flatten
 from keras.optimizers import Adam
 
+# In future note this code should load the contents of its saved attempts so it can start from there and not have to start from all over again
+# Fatal flaw.
+
+
+
 class SnakeGame:
     def __init__(self, width=10, height=10):
         self.width = width
