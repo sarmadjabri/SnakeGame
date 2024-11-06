@@ -4,11 +4,12 @@ import json
 from keras.models import Sequential
 from keras.layers import Dense, Flatten
 from keras.optimizers import Adam
+import h5py
 
 # In future note this code should load the contents of its saved attempts so it can start from there and not have to start from all over again
 # Fatal flaw.
 
-
+# Need to import contents from h5 file.
 
 class SnakeGame:
     def __init__(self, width=10, height=10):
