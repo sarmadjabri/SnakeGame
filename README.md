@@ -20,9 +20,4 @@ Please note that AI reccomended that I do a few things, the following are listed
   Food function
   some graphing but it made mistakes
 
-
-
-I dont know how to fix the models graphing to never stop. 
-
-Suspicions:
-Lack of memory and the thing between my ears will be the reason or its both
+Please note that if you run googlesnake.py(its not google), remember that it saves all of its attempts to snake_weights.h5 file and h5 might have issues with the library itself.
