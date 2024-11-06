@@ -21,3 +21,5 @@ Please note that AI reccomended that I do a few things, the following are listed
   some graphing but it made mistakes
 
 Please note that if you run googlesnake.py(its not google), remember that it saves all of its attempts to snake_weights.h5 file and h5 might have issues with the library itself.
+
+In the code provided where it says self.epilison, the higher the number the more it will explore and the lower the number then the more it will chase points and so its a tradeoff with the epilison.
