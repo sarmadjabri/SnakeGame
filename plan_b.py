@@ -1,11 +1,11 @@
 import pygame
 import random
-import time
+import heapq
 
 # Constants
-WIDTH = 20
-HEIGHT = 20
-CELL_SIZE = 20
+WIDTH = 10
+HEIGHT = 10
+CELL_SIZE = 40  # Adjusted for better visibility
 SCREEN_WIDTH = WIDTH * CELL_SIZE
 SCREEN_HEIGHT = HEIGHT * CELL_SIZE
 
@@ -14,27 +14,24 @@ UP = (0, -1)
 DOWN = (0, 1)
 LEFT = (-1, 0)
 RIGHT = (1, 0)
-
-# Directions in order of edge following
-DIRECTIONS = [RIGHT, DOWN, LEFT, UP]
+DIRECTIONS = [UP, DOWN, LEFT, RIGHT]
 
 class Snake:
     def __init__(self):
-        self.body = [(0, 0)]
-        self.direction_index = 0
+        self.body = [(0, HEIGHT - 1)]  # Start at the bottom
         self.grow = False
 
     def head(self):
         return self.body[0]
 
-    def move(self):
-        dx, dy = DIRECTIONS[self.direction_index]
+    def move(self, direction):
+        dx, dy = direction
         new_head = (self.head()[0] + dx, self.head()[1] + dy)
 
         # Check for self-collision or wall collision
         if (new_head in self.body or
-                new_head[0] < 0 or new_head[0] >= WIDTH or
-                new_head[1] < 0 or new_head[1] >= HEIGHT):
+                new_head[1] < 0 or new_head[0] < 0 or
+                new_head[0] >= WIDTH or new_head[1] >= HEIGHT):  # Check for walls
             return False
 
         # Move the snake
@@ -46,9 +43,6 @@ class Snake:
             self.grow = False
 
         return True
-
-    def change_direction(self):
-        self.direction_index = (self.direction_index + 1) % len(DIRECTIONS)
 
     def grow_snake(self):
         self.grow = True
@@ -65,9 +59,57 @@ class Game:
             if food_position not in self.snake.body:
                 return food_position
 
+    def a_star_search(self):
+        start = self.snake.head()
+        goal = self.food
+        open_set = []
+        heapq.heappush(open_set, (0, start))
+        came_from = {}
+        g_score = {start: 0}
+        f_score = {start: self.heuristic(start, goal)}
+
+        while open_set:
+            current = heapq.heappop(open_set)[1]
+
+            if current == goal:
+                return self.reconstruct_path(came_from, current)
+
+            for direction in DIRECTIONS:
+                neighbor = (current[0] + direction[0], current[1] + direction[1])
+                if (0 <= neighbor[0] < WIDTH and
+                        0 <= neighbor[1] < HEIGHT and
+                        neighbor not in self.snake.body):  # Valid move
+                    tentative_g_score = g_score[current] + 1
+                    if tentative_g_score < g_score.get(neighbor, float('inf')):
+                        came_from[neighbor] = current
+                        g_score[neighbor] = tentative_g_score
+                        f_score[neighbor] = tentative_g_score + self.heuristic(neighbor, goal)
+
+                        if neighbor not in [i[1] for i in open_set]:
+                            heapq.heappush(open_set, (f_score[neighbor], neighbor))
+
+        return []  # No path found
+
+    def heuristic(self, a, b):
+        # Manhattan distance
+        return abs(a[0] - b[0]) + abs(a[1] - b[1])
+
+    def reconstruct_path(self, came_from, current):
+        total_path = [current]
+        while current in came_from:
+            current = came_from[current]
+            total_path.append(current)
+        total_path.reverse()
+        return total_path
+
     def update(self):
-        if not self.snake.move():
-            self.running = False  # Game over
+        path = self.a_star_search()
+        if path and len(path) > 1:
+            direction = (path[1][0] - path[0][0], path[1][1] - path[0][1])
+            if not self.snake.move(direction):
+                self.running = False  # Game over
+        else:
+            self.running = False  # No path found, game over
 
         if self.snake.head() == self.food:
             self.snake.grow_snake()
@@ -75,15 +117,19 @@ class Game:
 
     def render(self, screen):
         screen.fill((0, 0, 0))  # Clear the screen
+
+        # Draw the snake
         for x, y in self.snake.body:
             pygame.draw.rect(screen, (0, 255, 0), (x * CELL_SIZE, y * CELL_SIZE, CELL_SIZE, CELL_SIZE))
+
+        # Draw the food
         fx, fy = self.food
         pygame.draw.rect(screen, (255, 0, 0), (fx * CELL_SIZE, fy * CELL_SIZE, CELL_SIZE, CELL_SIZE))
 
     def run(self):
         pygame.init()
         screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
-        pygame.display.set_caption("Snake Game")
+        pygame.display.set_caption("Row-Clearing Snake Game")
         clock = pygame.time.Clock()
 
         while self.running:
@@ -94,9 +140,7 @@ class Game:
             self.update()
             self.render(screen)
             pygame.display.flip()
-            clock.tick(10)  # Game speed
-
-            self.snake.change_direction()  # Change direction for edge following logic
+            clock.tick(2)  # Game speed
 
         pygame.quit()
 
