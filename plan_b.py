@@ -3,8 +3,8 @@ import random
 import heapq
 
 # Constants
-WIDTH = 10
-HEIGHT = 10
+WIDTH = 30
+HEIGHT = 20
 CELL_SIZE = 40  # Adjusted for better visibility
 SCREEN_WIDTH = WIDTH * CELL_SIZE
 SCREEN_HEIGHT = HEIGHT * CELL_SIZE
@@ -20,11 +20,16 @@ class Snake:
     def __init__(self):
         self.body = [(0, HEIGHT - 1)]  # Start at the bottom
         self.grow = False
+        self.last_direction = RIGHT  # Start moving to the right
 
     def head(self):
         return self.body[0]
 
     def move(self, direction):
+        # Prevent moving in the opposite direction
+        if direction == (self.last_direction[0] * -1, self.last_direction[1] * -1):
+            return False
+
         dx, dy = direction
         new_head = (self.head()[0] + dx, self.head()[1] + dy)
 
@@ -36,6 +41,7 @@ class Snake:
 
         # Move the snake
         self.body.insert(0, new_head)
+        self.last_direction = direction  # Update the direction
 
         if not self.grow:
             self.body.pop()  # Remove tail unless growing
@@ -52,6 +58,7 @@ class Game:
         self.snake = Snake()
         self.food = self.place_food()
         self.running = True
+        self.score = 0  # Initialize score
 
     def place_food(self):
         while True:
@@ -76,6 +83,8 @@ class Game:
 
             for direction in DIRECTIONS:
                 neighbor = (current[0] + direction[0], current[1] + direction[1])
+
+                # Valid move check (no body or wall)
                 if (0 <= neighbor[0] < WIDTH and
                         0 <= neighbor[1] < HEIGHT and
                         neighbor not in self.snake.body):  # Valid move
@@ -105,15 +114,19 @@ class Game:
     def update(self):
         path = self.a_star_search()
         if path and len(path) > 1:
+            # Calculate the direction for the snake
             direction = (path[1][0] - path[0][0], path[1][1] - path[0][1])
+
+            # Move the snake in the calculated direction
             if not self.snake.move(direction):
-                self.running = False  # Game over
+                self.running = False  # Game over if snake hits itself or wall
         else:
             self.running = False  # No path found, game over
 
         if self.snake.head() == self.food:
             self.snake.grow_snake()
             self.food = self.place_food()  # Place new food
+            self.score += 1  # Increment score when snake eats food
 
     def render(self, screen):
         screen.fill((0, 0, 0))  # Clear the screen
@@ -125,6 +138,11 @@ class Game:
         # Draw the food
         fx, fy = self.food
         pygame.draw.rect(screen, (255, 0, 0), (fx * CELL_SIZE, fy * CELL_SIZE, CELL_SIZE, CELL_SIZE))
+
+        # Render the score
+        font = pygame.font.SysFont('Arial', 24)
+        score_text = font.render(f"Score: {self.score}", True, (255, 255, 255))
+        screen.blit(score_text, (10, 10))
 
     def run(self):
         pygame.init()
@@ -140,9 +158,10 @@ class Game:
             self.update()
             self.render(screen)
             pygame.display.flip()
-            clock.tick(2)  # Game speed
+            clock.tick(25)  # Game speed
 
         pygame.quit()
+        print(f"Game Over! Final Score: {self.score}")  # Print the final score
 
 # Start the game
 if __name__ == "__main__":
