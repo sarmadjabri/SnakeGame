@@ -5,41 +5,24 @@ from keras.models import Sequential
 from keras.layers import Dense, Flatten
 from keras.optimizers import Adam
 import h5py
-import os
-import pygame
 import heapq
 
-# Constants
-GRID_SIZE = 10  # Grid size for the snake game
-BATCH_SIZE = 64
-EPISODES = 50
-MAX_TIMESTEPS = 1000
+# Constants for the game grid
+WIDTH = 9
+HEIGHT = 9
+DIRECTIONS = [(0, -1), (0, 1), (-1, 0), (1, 0)]  # UP, DOWN, LEFT, RIGHT
 
-# A* Pathfinding Constants
-WIDTH = 30
-HEIGHT = 20
-CELL_SIZE = 40  # Adjusted for better visibility
-SCREEN_WIDTH = WIDTH * CELL_SIZE
-SCREEN_HEIGHT = HEIGHT * CELL_SIZE
-UP = (0, -1)
-DOWN = (0, 1)
-LEFT = (-1, 0)
-RIGHT = (1, 0)
-DIRECTIONS = [UP, DOWN, LEFT, RIGHT]
-
-# SnakeGame Class
 class SnakeGame:
-    def __init__(self, width=GRID_SIZE, height=GRID_SIZE):
+    def __init__(self, width=WIDTH, height=HEIGHT):
         self.width = width
         self.height = height
         self.snake_position = [(0, 0)]
-        self.direction = (0, 1)
+        self.direction = (0, 1)  # Start moving to the right
         self.food_position = self._generate_food()
         self.score = 0
         self.previous_distance = self._calculate_distance()
 
     def _generate_food(self):
-        """Generate food position."""
         while True:
             food_x = random.randint(0, self.width - 1)
             food_y = random.randint(0, self.height - 1)
@@ -47,21 +30,18 @@ class SnakeGame:
                 return (food_x, food_y)
 
     def _get_state(self):
-        """Return the current game state as a numpy array."""
         state = np.zeros((self.height, self.width))
         for x, y in self.snake_position:
-            state[x, y] = 1  # Snake body part is marked as 1
-        state[self.food_position] = 2  # Food is marked as 2
+            state[x, y] = 1  # Mark the snake body
+        state[self.food_position] = 2  # Mark the food
         return state
 
     def _calculate_distance(self):
-        """Calculate Manhattan distance from snake head to food."""
         head_x, head_y = self.snake_position[0]
         food_x, food_y = self.food_position
         return abs(head_x - food_x) + abs(head_y - food_y)
 
     def step(self, action):
-        """Take a step in the game based on the action."""
         self._update_direction(action)
         head_x, head_y = self.snake_position[0]
         new_head_x = (head_x + self.direction[0]) % self.width
@@ -71,7 +51,8 @@ class SnakeGame:
         # Check for collisions
         if self._is_collision(new_head_x, new_head_y):
             reward = -10
-            return self._get_state(), reward, True, {"score": self.score}
+            print(f"Collision! Reward: {reward}")  # Log the reward for collision
+            return self._get_state(), reward, True, {"score": self.score, "reward": reward}
 
         # Calculate the current distance to food
         current_distance = self._calculate_distance()
@@ -81,20 +62,19 @@ class SnakeGame:
             self.food_position = self._generate_food()
             self.score += 1
             reward = 10  # Reward for eating food
+            print(f"Ate food! Reward: {reward}")  # Log the reward for eating food
         else:
             reward = self._calculate_movement_reward(current_distance)
+            print(f"Moved. Reward: {reward}")  # Log the reward for movement
             self.snake_position.pop()  # Remove tail to maintain length
 
         self.previous_distance = current_distance
-        return self._get_state(), reward, False, {"score": self.score}
+        return self._get_state(), reward, False, {"score": self.score, "reward": reward}
 
     def _update_direction(self, action):
-        """Update the snake's direction based on the chosen action."""
-        directions = [(0, -1), (0, 1), (-1, 0), (1, 0)]
-        self.direction = directions[action]
+        self.direction = DIRECTIONS[action]
 
     def _is_collision(self, head_x, head_y):
-        """Check if the snake collides with itself or walls."""
         return (
                 head_x < 0 or head_x >= self.width or
                 head_y < 0 or head_y >= self.height or
@@ -102,7 +82,6 @@ class SnakeGame:
         )
 
     def _calculate_movement_reward(self, current_distance):
-        """Calculate reward based on movement (getting closer/farther from food)."""
         if current_distance < self.previous_distance:
             return 1  # Reward for getting closer to food
         elif current_distance > self.previous_distance:
@@ -110,7 +89,6 @@ class SnakeGame:
         return 0  # Neutral movement
 
     def reset(self):
-        """Reset the game to its initial state."""
         self.snake_position = [(0, 0)]
         self.direction = (0, 1)
         self.food_position = self._generate_food()
@@ -118,10 +96,11 @@ class SnakeGame:
         self.previous_distance = self._calculate_distance()
         return self._get_state()
 
-    # A* Pathfinding (same logic as provided in the original code)
-    def a_star_search(self):
-        start = self.snake_position[0]
-        goal = self.food_position
+class Pathfinding:
+    def __init__(self):
+        pass
+
+    def a_star_search(self, start, goal, snake_body):
         open_set = []
         heapq.heappush(open_set, (0, start))
         came_from = {}
@@ -138,9 +117,9 @@ class SnakeGame:
                 neighbor = (current[0] + direction[0], current[1] + direction[1])
 
                 # Valid move check (no body or wall)
-                if (0 <= neighbor[0] < self.width and
-                        0 <= neighbor[1] < self.height and
-                        neighbor not in self.snake_position):  # Valid move
+                if (0 <= neighbor[0] < WIDTH and
+                        0 <= neighbor[1] < HEIGHT and
+                        neighbor not in snake_body):  # Valid move
                     tentative_g_score = g_score[current] + 1
                     if tentative_g_score < g_score.get(neighbor, float('inf')):
                         came_from[neighbor] = current
@@ -153,7 +132,7 @@ class SnakeGame:
         return []  # No path found
 
     def heuristic(self, a, b):
-        """Heuristic: Manhattan distance."""
+        # Manhattan distance
         return abs(a[0] - b[0]) + abs(a[1] - b[1])
 
     def reconstruct_path(self, came_from, current):
@@ -164,21 +143,20 @@ class SnakeGame:
         total_path.reverse()
         return total_path
 
-# DQN Agent Class (same as before)
+
 class DQNAgent:
     def __init__(self, state_size, action_size):
         self.state_size = state_size
         self.action_size = action_size
         self.memory = []
         self.gamma = 0.95  # Discount rate
-        self.epsilon = 1.0  # Exploration rate
+        self.epsilon = 0.5  # Exploration rate
         self.epsilon_min = 0.01
         self.epsilon_decay = 0.995
         self.learning_rate = 0.0001
         self.model = self._build_model()
 
     def _build_model(self):
-        """Build the neural network model."""
         model = Sequential()
         model.add(Flatten(input_shape=(self.state_size, self.state_size)))
         model.add(Dense(64, activation='relu'))
@@ -188,18 +166,15 @@ class DQNAgent:
         return model
 
     def remember(self, state, action, reward, next_state, done):
-        """Store experiences in memory."""
         self.memory.append((state, action, reward, next_state, done))
 
     def act(self, state):
-        """Choose an action based on the epsilon-greedy strategy."""
         if np.random.rand() <= self.epsilon:
             return random.randrange(self.action_size)
         act_values = self.model.predict(state)
         return np.argmax(act_values[0])
 
     def replay(self, batch_size):
-        """Replay previous experiences and train the model."""
         if len(self.memory) < batch_size:
             return
         minibatch = random.sample(self.memory, batch_size)
@@ -214,61 +189,56 @@ class DQNAgent:
             self.epsilon *= self.epsilon_decay
 
     def save(self, name):
-        """Save the model to a file."""
         self.model.save(name)
 
     def load(self, name):
-        """Load a previously saved model."""
-        if os.path.exists(name):
-            self.model.load_weights(name)
-            print(f"Loaded model weights from {name}")
-        else:
-            print("No saved model found, starting from scratch.")
+        self.model.load_weights(name)
 
-# Main loop to train the agent
-if __name__ == "__main__":
+
+def main():
     game = SnakeGame()
-    agent = DQNAgent(state_size=GRID_SIZE, action_size=4)
+    agent = DQNAgent(state_size=9, action_size=4)  # Update state_size to 9 since the grid is 9x9
+    pathfinder = Pathfinding()
 
-    # Load pre-existing model if available
-    agent.load("snake_weights.h5")
-
+    batch_size = 2
+    episodes = 1000
     scores = []
-    for episode in range(EPISODES):
-        state = game.reset().reshape(1, GRID_SIZE, GRID_SIZE)
-        total_reward = 0
-        for time in range(MAX_TIMESTEPS):
-            # DQN makes a decision
-            action = agent.act(state)
-            
-            # Use A* for pathfinding (fallback if necessary)
-            path = game.a_star_search()  # Get path from A*
-            if path and len(path) > 1:
-                # Move the snake towards food based on the A* path
-                next_direction = (path[1][0] - path[0][0], path[1][1] - path[0][1])
-                action = DIRECTIONS.index(next_direction)
+
+    for episode in range(episodes):
+        state = game.reset().reshape(1, 9, 9)  # Reshape to (1, 9, 9) since the grid is 9x9
+        for time in range(1000):
+            # Try A* pathfinding to get to the food
+            start = game.snake_position[0]
+            goal = game.food_position
+            path = pathfinder.a_star_search(start, goal, game.snake_position)
+
+            if path:
+                # Move in the direction of the path found by A*
+                next_move = path[1]
+                action = DIRECTIONS.index((next_move[0] - start[0], next_move[1] - start[1]))
             else:
-                # Use the DQN to move if A* pathfinding fails
+                # If A* can't find a path, fall back to DQN agent
                 action = agent.act(state)
 
             next_state, reward, done, info = game.step(action)
-            next_state = next_state.reshape(1, GRID_SIZE, GRID_SIZE)
+            next_state = next_state.reshape(1, 9, 9)  # Reshape to (1, 9, 9)
             agent.remember(state, action, reward, next_state, done)
             state = next_state
-            total_reward += reward
 
             if done:
-                print(f"Episode {episode} finished after {time} timesteps with score: {info['score']}")
+                print("Episode {} finished after {} timesteps".format(episode, time))
                 break
 
-            if len(agent.memory) > BATCH_SIZE:
-                agent.replay(BATCH_SIZE)
+            if len(agent.memory) > batch_size:
+                agent.replay(batch_size)
 
         scores.append(info["score"])
 
-    # Save the model and scores
-    agent.save("snake_weights.h5")
+    # Save the agent's scores and model
     with open("scores.json", "w") as f:
         json.dump(scores, f)
 
-    print(f"Training completed. Final scores: {scores}")
+    agent.save("snake_weights.h5")
+
+if __name__ == "__main__":
+    main()
