@@ -95,6 +95,7 @@ class SnakeGame:
         self.previous_distance = self._calculate_distance()
         return self._get_state()
 
+
 class DQNAgent:
     def __init__(self, state_size, action_size, model_path=None):
         self.state_size = state_size
@@ -109,17 +110,22 @@ class DQNAgent:
 
         # Load the pre-trained model if available
         if model_path and os.path.exists(model_path):
-            self.load(model_path)
-            print(f"Model loaded from {model_path}")
+            try:
+                self.load(model_path)
+                print(f"Model loaded from {model_path}")
+            except ValueError as e:
+                print(f"Error loading model: {e}")
+                print("Trying to load model with a compatible architecture...")
+                self.model = self._build_model()  # Rebuild the model if there's an error loading the weights
         else:
             print("No pre-trained model found, starting fresh.")
 
     def _build_model(self):
         model = Sequential()
-        model.add(Flatten(input_shape=(self.state_size, self.state_size)))
-        model.add(Dense(64, activation='relu'))
-        model.add(Dense(64, activation='relu'))
-        model.add(Dense(self.action_size, activation='linear'))
+        model.add(Flatten(input_shape=(self.state_size, self.state_size)))  # Flatten input
+        model.add(Dense(64, activation='relu'))  # Hidden layer 1
+        model.add(Dense(64, activation='relu'))  # Hidden layer 2
+        model.add(Dense(self.action_size, activation='linear'))  # Output layer (Q-values)
         model.compile(loss='mse', optimizer=Adam(learning_rate=self.learning_rate))
         return model
 
@@ -154,7 +160,14 @@ class DQNAgent:
         print(f"Model saved as {name}")
 
     def load(self, name):
-        self.model.load_weights(name)
+        # Try loading weights; if the architecture doesn't match, handle the error
+        try:
+            self.model.load_weights(name)
+        except ValueError as e:
+            print(f"Error loading model weights: {e}")
+            print("Make sure the model architecture matches the saved model.")
+            raise  # Raise the error again to notify the user
+
 
 if __name__ == "__main__":
     game = SnakeGame()
