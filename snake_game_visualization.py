@@ -4,6 +4,7 @@ from keras.models import Sequential
 from keras.layers import Dense, Flatten
 from keras.optimizers import Adam
 import matplotlib.pyplot as plt
+import json
 
 class SnakeGame:
     def __init__(self, width=10, height=10):
@@ -97,7 +98,7 @@ class DQNAgent:
         self.action_size = action_size
         self.memory = []
         self.gamma = 0.95
-        self.epsilon = 1.0
+        self.epsilon = 0.5
         self.epsilon_min = 0.01
         self.epsilon_decay = 0.995
         self.learning_rate = 0.0001
@@ -146,7 +147,7 @@ if __name__ == "__main__":
     game = SnakeGame()
     agent = DQNAgent(state_size=10, action_size=4)
     batch_size = 64
-    episodes = 50
+    episodes = 1000  # Training for 1000 episodes
     scores = []
 
     for episode in range(episodes):
@@ -154,7 +155,7 @@ if __name__ == "__main__":
         for time in range(1000):
             action = agent.act(state)
             next_state, reward, done, info = game.step(action)
-            print("Score: {}, Reward: {}".format(info["score"], info["reward"]))
+            print("Episode: {} | Score: {}, Reward: {}".format(episode, info["score"], info["reward"]))
             next_state = next_state.reshape(1, 10, 10)
             agent.remember(state, action, reward, next_state, done)
             state = next_state
@@ -172,3 +173,10 @@ if __name__ == "__main__":
 
     plt.ioff()
     plt.show()
+
+    # Save the scores to a file
+    with open("scores.json", "w") as f:
+        json.dump(scores, f)
+
+    # Save the trained model weights
+    agent.save("snake_weights.h5")
