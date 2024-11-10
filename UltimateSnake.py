@@ -50,7 +50,7 @@ class SnakeGame:
 
         # Check for collisions
         if self._is_collision(new_head_x, new_head_y):
-            reward = -10
+            reward = -10  # Heavy penalty for collisions
             print(f"Collision! Reward: {reward}")  # Log the reward for collision
             return self._get_state(), reward, True, {"score": self.score, "reward": reward}
 
@@ -150,10 +150,10 @@ class DQNAgent:
         self.action_size = action_size
         self.memory = []
         self.gamma = 0.95  # Discount rate
-        self.epsilon = 0.5  # Exploration rate
+        self.epsilon = 1.0  # Exploration rate
         self.epsilon_min = 0.01
         self.epsilon_decay = 0.995
-        self.learning_rate = 0.0001
+        self.learning_rate = 0.00025
         self.model = self._build_model()
 
     def _build_model(self):
@@ -200,7 +200,7 @@ def main():
     agent = DQNAgent(state_size=9, action_size=4)  # Update state_size to 9 since the grid is 9x9
     pathfinder = Pathfinding()
 
-    batch_size = 2
+    batch_size = 32
     episodes = 1000
     scores = []
 
@@ -226,7 +226,7 @@ def main():
             state = next_state
 
             if done:
-                print("Episode {} finished after {} timesteps".format(episode, time))
+                print(f"Episode {episode+1} finished after {time+1} timesteps, score: {info['score']}")
                 break
 
             if len(agent.memory) > batch_size:
