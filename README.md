@@ -22,4 +22,4 @@ Please note that AI reccomended that I do a few things, the following are listed
 
 Please note that if you run googlesnake.py(its not google), remember that it saves all of its attempts to snake_weights.h5 file and h5 might have issues with the library itself.
 
-In the code provided where it says self.epilison, the higher the number the more it will explore and the lower the number then the more it will chase points and so its a tradeoff with the epilison.
+In the code provided where it says self.epilison, It is a exploration for greed tradeoff from 0 to 1. 1 is the most explorative and 0 is the most greedy for points and wont learn or try new strategies.
