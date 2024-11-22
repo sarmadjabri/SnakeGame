@@ -26,8 +26,8 @@ class SnakeGame:
     def _get_state(self):
         state = np.zeros((self.height, self.width))
         for x, y in self.snake_position:
-            state[x, y] = 1
-        state[self.food_position] = 2
+            state[x, y] = 1  # Snake body
+        state[self.food_position] = 2  # Food
         return state
 
     def _calculate_distance(self):
@@ -169,7 +169,7 @@ if __name__ == "__main__":
         plt.clf()
         plt.plot(scores)
         plt.draw()
-        plt.pause(0.1)
+        plt.pause(0.05)
 
     plt.ioff()
     plt.show()
