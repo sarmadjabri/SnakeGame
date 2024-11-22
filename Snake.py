@@ -7,9 +7,6 @@ from keras.optimizers import Adam
 import h5py
 import os
 
-# In future note this code should load the contents of its saved attempts so it can start from there and not have to start from all over again
-# Fatal flaw. Need to import contents from h5 file.
-
 class SnakeGame:
     def __init__(self, width=10, height=10):
         self.width = width
@@ -81,11 +78,14 @@ class SnakeGame:
         )
 
     def _calculate_movement_reward(self, current_distance):
+        """
+        Reward function that encourages moving closer to the food and punishes moving away.
+        """
         if current_distance < self.previous_distance:
             return 1  # Reward for getting closer to food
         elif current_distance > self.previous_distance:
             return -1  # Punishment for moving away from food
-        return 0  # Neutral movement
+        return 0  # Neutral movement when distance remains the same
 
     def reset(self):
         self.snake_position = [(0, 0)]
@@ -102,7 +102,7 @@ class DQNAgent:
         self.action_size = action_size
         self.memory = []
         self.gamma = 0.95  # Discount rate
-        self.epsilon = 1.0  # Exploration rate
+        self.epsilon = 0.7567  # Exploration rate
         self.epsilon_min = 0.01
         self.epsilon_decay = 0.995
         self.learning_rate = 0.0001
@@ -113,6 +113,7 @@ class DQNAgent:
             try:
                 self.load(model_path)
                 print(f"Model loaded from {model_path}")
+                print(f"Model architecture: {self.model.summary()}")
             except ValueError as e:
                 print(f"Error loading model: {e}")
                 print("Trying to load model with a compatible architecture...")
@@ -172,8 +173,8 @@ class DQNAgent:
 if __name__ == "__main__":
     game = SnakeGame()
     agent = DQNAgent(state_size=10, action_size=4, model_path="snake_weights.h5")
-    batch_size = 32
-    episodes = 1000
+    batch_size = 64
+    episodes = 20
     scores = []
 
     for episode in range(episodes):
@@ -192,7 +193,7 @@ if __name__ == "__main__":
         scores.append(info["score"])
 
         # Save the model after each episode
-        if episode % 50 == 0:  # Save every 50 episodes to prevent overwriting too often
+        if episode % 10 == 0:  # Save every 10 episodes to prevent overwriting too often
             agent.save("snake_weights.h5")
 
     # Save scores to scores.json
