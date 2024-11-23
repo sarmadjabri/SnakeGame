@@ -1,23 +1,32 @@
-import numpy as np
+import pygame
 import random
-import json
+import numpy as np
 from keras.models import Sequential
 from keras.layers import Dense, Flatten
 from keras.optimizers import Adam
-import h5py
 import heapq
+import matplotlib.pyplot as plt
 
-# Constants for the game grid
-WIDTH = 9
-HEIGHT = 9
-DIRECTIONS = [(0, -1), (0, 1), (-1, 0), (1, 0)]  # UP, DOWN, LEFT, RIGHT
+# Constants for the game
+WIDTH = 30
+HEIGHT = 20
+CELL_SIZE = 40
+SCREEN_WIDTH = WIDTH * CELL_SIZE
+SCREEN_HEIGHT = HEIGHT * CELL_SIZE
+
+# Directions for snake movement
+UP = (0, -1)
+DOWN = (0, 1)
+LEFT = (-1, 0)
+RIGHT = (1, 0)
+DIRECTIONS = [UP, DOWN, LEFT, RIGHT]
 
 class SnakeGame:
     def __init__(self, width=WIDTH, height=HEIGHT):
         self.width = width
         self.height = height
         self.snake_position = [(0, 0)]
-        self.direction = (0, 1)  # Start moving to the right
+        self.direction = RIGHT
         self.food_position = self._generate_food()
         self.score = 0
         self.previous_distance = self._calculate_distance()
@@ -32,8 +41,8 @@ class SnakeGame:
     def _get_state(self):
         state = np.zeros((self.height, self.width))
         for x, y in self.snake_position:
-            state[x, y] = 1  # Mark the snake body
-        state[self.food_position] = 2  # Mark the food
+            state[x, y] = 1  # Snake body
+        state[self.food_position] = 2  # Food
         return state
 
     def _calculate_distance(self):
@@ -48,24 +57,20 @@ class SnakeGame:
         new_head_y = (head_y + self.direction[1]) % self.height
         self.snake_position.insert(0, (new_head_x, new_head_y))
 
+        # Calculate current distance before checking for collisions or food
+        current_distance = self._calculate_distance()
+
         # Check for collisions
         if self._is_collision(new_head_x, new_head_y):
-            reward = -10  # Heavy penalty for collisions
-            print(f"Collision! Reward: {reward}")  # Log the reward for collision
-            return self._get_state(), reward, True, {"score": self.score, "reward": reward}
-
-        # Calculate the current distance to food
-        current_distance = self._calculate_distance()
+            return self._get_state(), -10, True, {"score": self.score, "reward": -10}
 
         # Check for food
         if (new_head_x, new_head_y) == self.food_position:
             self.food_position = self._generate_food()
             self.score += 1
             reward = 10  # Reward for eating food
-            print(f"Ate food! Reward: {reward}")  # Log the reward for eating food
         else:
             reward = self._calculate_movement_reward(current_distance)
-            print(f"Moved. Reward: {reward}")  # Log the reward for movement
             self.snake_position.pop()  # Remove tail to maintain length
 
         self.previous_distance = current_distance
@@ -90,70 +95,38 @@ class SnakeGame:
 
     def reset(self):
         self.snake_position = [(0, 0)]
-        self.direction = (0, 1)
+        self.direction = RIGHT
         self.food_position = self._generate_food()
         self.score = 0
         self.previous_distance = self._calculate_distance()
         return self._get_state()
 
-class Pathfinding:
-    def __init__(self):
-        pass
+    def render(self, screen):
+        screen.fill((0, 0, 0))  # Clear the screen
 
-    def a_star_search(self, start, goal, snake_body):
-        open_set = []
-        heapq.heappush(open_set, (0, start))
-        came_from = {}
-        g_score = {start: 0}
-        f_score = {start: self.heuristic(start, goal)}
+        # Draw the snake
+        for x, y in self.snake_position:
+            pygame.draw.rect(screen, (0, 255, 0), (x * CELL_SIZE, y * CELL_SIZE, CELL_SIZE, CELL_SIZE))
 
-        while open_set:
-            current = heapq.heappop(open_set)[1]
+        # Draw the food
+        fx, fy = self.food_position
+        pygame.draw.rect(screen, (255, 0, 0), (fx * CELL_SIZE, fy * CELL_SIZE, CELL_SIZE, CELL_SIZE))
 
-            if current == goal:
-                return self.reconstruct_path(came_from, current)
-
-            for direction in DIRECTIONS:
-                neighbor = (current[0] + direction[0], current[1] + direction[1])
-
-                # Valid move check (no body or wall)
-                if (0 <= neighbor[0] < WIDTH and
-                        0 <= neighbor[1] < HEIGHT and
-                        neighbor not in snake_body):  # Valid move
-                    tentative_g_score = g_score[current] + 1
-                    if tentative_g_score < g_score.get(neighbor, float('inf')):
-                        came_from[neighbor] = current
-                        g_score[neighbor] = tentative_g_score
-                        f_score[neighbor] = tentative_g_score + self.heuristic(neighbor, goal)
-
-                        if neighbor not in [i[1] for i in open_set]:
-                            heapq.heappush(open_set, (f_score[neighbor], neighbor))
-
-        return []  # No path found
-
-    def heuristic(self, a, b):
-        # Manhattan distance
-        return abs(a[0] - b[0]) + abs(a[1] - b[1])
-
-    def reconstruct_path(self, came_from, current):
-        total_path = [current]
-        while current in came_from:
-            current = came_from[current]
-            total_path.append(current)
-        total_path.reverse()
-        return total_path
-
+        # Render the score
+        font = pygame.font.SysFont('Arial', 24)
+        score_text = font.render(f"Score: {self.score}", True, (255, 255, 255))
+        screen.blit(score_text, (10, 10))
 
 class DQNAgent:
     def __init__(self, state_size, action_size):
         self.state_size = state_size
         self.action_size = action_size
         self.memory = []
-        self.gamma = 0.95  # Discount rate
-        self.epsilon = 1.0  # Exploration rate
+        self.gamma = 0.95
+        self.epsilon = 0.5
         self.epsilon_min = 0.01
         self.epsilon_decay = 0.995
-        self.learning_rate = 0.00025
+        self.learning_rate = 0.0001
         self.model = self._build_model()
 
     def _build_model(self):
@@ -194,51 +167,34 @@ class DQNAgent:
     def load(self, name):
         self.model.load_weights(name)
 
+# Main Game Loop
+if __name__ == "__main__":
+    pygame.init()
+    screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
+    pygame.display.set_caption("Snake AI Game")
+    clock = pygame.time.Clock()
 
-def main():
     game = SnakeGame()
-    agent = DQNAgent(state_size=9, action_size=4)  # Update state_size to 9 since the grid is 9x9
-    pathfinder = Pathfinding()
-
-    batch_size = 32
-    episodes = 1000
-    scores = []
+    agent = DQNAgent(state_size=10, action_size=4)
+    batch_size = 64
+    episodes = 1000  # Number of training episodes
 
     for episode in range(episodes):
-        state = game.reset().reshape(1, 9, 9)  # Reshape to (1, 9, 9) since the grid is 9x9
-        for time in range(1000):
-            # Try A* pathfinding to get to the food
-            start = game.snake_position[0]
-            goal = game.food_position
-            path = pathfinder.a_star_search(start, goal, game.snake_position)
-
-            if path:
-                # Move in the direction of the path found by A*
-                next_move = path[1]
-                action = DIRECTIONS.index((next_move[0] - start[0], next_move[1] - start[1]))
-            else:
-                # If A* can't find a path, fall back to DQN agent
-                action = agent.act(state)
-
+        state = game.reset().reshape(1, 10, 10)
+        done = False
+        while not done:
+            action = agent.act(state)
             next_state, reward, done, info = game.step(action)
-            next_state = next_state.reshape(1, 9, 9)  # Reshape to (1, 9, 9)
+            next_state = next_state.reshape(1, 10, 10)
             agent.remember(state, action, reward, next_state, done)
             state = next_state
+            game.render(screen)
+            pygame.display.flip()
+            clock.tick(25)  # Game speed
 
             if done:
-                print(f"Episode {episode+1} finished after {time+1} timesteps, score: {info['score']}")
+                print(f"Episode {episode}/{episodes} - Score: {info['score']}")
                 break
+        agent.replay(batch_size)
 
-            if len(agent.memory) > batch_size:
-                agent.replay(batch_size)
-
-        scores.append(info["score"])
-
-    # Save the agent's scores and model
-    with open("scores.json", "w") as f:
-        json.dump(scores, f)
-
-    agent.save("snake_weights.h5")
-
-if __name__ == "__main__":
-    main()
+    pygame.quit()
