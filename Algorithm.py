@@ -3,8 +3,8 @@ import random
 import heapq
 
 # Constants
-WIDTH = 30
-HEIGHT = 20
+WIDTH = 10
+HEIGHT = 15
 CELL_SIZE = 40  # Adjusted for better visibility
 SCREEN_WIDTH = WIDTH * CELL_SIZE
 SCREEN_HEIGHT = HEIGHT * CELL_SIZE
@@ -84,7 +84,7 @@ class Game:
             for direction in DIRECTIONS:
                 neighbor = (current[0] + direction[0], current[1] + direction[1])
 
-                # Valid move check (no body or wall)
+                # Valid move check because im bored
                 if (0 <= neighbor[0] < WIDTH and
                         0 <= neighbor[1] < HEIGHT and
                         neighbor not in self.snake.body):  # Valid move
@@ -100,7 +100,7 @@ class Game:
         return []  # No path found
 
     def heuristic(self, a, b):
-        # Manhattan distance
+        # Manhattan distance thingy because it is a grid 
         return abs(a[0] - b[0]) + abs(a[1] - b[1])
 
     def reconstruct_path(self, came_from, current):
@@ -119,7 +119,7 @@ class Game:
 
             # Move the snake in the calculated direction
             if not self.snake.move(direction):
-                self.running = False  # Game over if snake hits itself or wall
+                self.running = False  # Game over functiony
         else:
             self.running = False  # No path found, game over
 

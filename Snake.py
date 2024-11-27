@@ -7,6 +7,8 @@ from keras.optimizers import Adam
 import h5py
 import os
 
+
+
 class SnakeGame:
     def __init__(self, width=10, height=10):
         self.width = width
@@ -84,8 +86,8 @@ class SnakeGame:
         if current_distance < self.previous_distance:
             return 1  # Reward for getting closer to food
         elif current_distance > self.previous_distance:
-            return -1  # Punishment for moving away from food
-        return 0  # Neutral movement when distance remains the same
+            return -1  # Punishment for moving away from food reinforcement learning neural net
+        return 0  # Neutral movement because distance is the same
 
     def reset(self):
         self.snake_position = [(0, 0)]
@@ -193,7 +195,7 @@ if __name__ == "__main__":
         scores.append(info["score"])
 
         # Save the model after each episode
-        if episode % 10 == 0:  # Save every 10 episodes to prevent overwriting too often
+        if episode % 10 == 0:  # Save every x episodes(because of overfitting)
             agent.save("snake_weights.h5")
 
     # Save scores to scores.json
