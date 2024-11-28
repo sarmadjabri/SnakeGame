@@ -1,4 +1,8 @@
 # Snake-Game
+In order to run the code to see for yourself just copy the code from the visualization file and it should make a weight file for it to store its attempts(to prevent starting over from scratch.
+
+
+
 Recreation of google snake and a Deep Q Neural network to beat google snake.
 Source code is not fully mine as I did get help from numerous websites.
 
@@ -20,6 +24,6 @@ Please note that AI reccomended that I do a few things, the following are listed
   Food function
   some graphing but it made mistakes
 
-Please note that if you run googlesnake.py(its not google), remember that it saves all of its attempts to snake_weights.h5 file and h5 might have issues with the library itself.
+Please note that if you run snake.py remember that it saves all of its attempts to snake_weights.h5 file and h5 might have issues with the library itself.
 
 In the code provided where it says self.epilison, It is a exploration for greed tradeoff from 0 to 1. 1 is the most explorative and 0 is the most greedy for points and wont learn or try new strategies.
