@@ -4,7 +4,7 @@ import heapq
 
 # Constants
 WIDTH = 10
-HEIGHT = 15
+HEIGHT = 10
 CELL_SIZE = 40  # Adjusted for better visibility
 SCREEN_WIDTH = WIDTH * CELL_SIZE
 SCREEN_HEIGHT = HEIGHT * CELL_SIZE
@@ -158,7 +158,7 @@ class Game:
             self.update()
             self.render(screen)
             pygame.display.flip()
-            clock.tick(25)  # Game speed
+            clock.tick(10)  # Game speed
 
         pygame.quit()
         print(f"Game Over! Final Score: {self.score}")  # Print the final score

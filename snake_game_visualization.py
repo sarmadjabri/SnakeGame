@@ -155,7 +155,7 @@ if __name__ == "__main__":
     plt.ion()  # Turn on interactive mode for plotting
     game = SnakeGame()
     agent = DQNAgent(state_size=10, action_size=4)
-    batch_size = 64
+    batch_size = 32
     episodes = 10  # Training for 1000 episodes
     scores = []
 
@@ -164,7 +164,7 @@ if __name__ == "__main__":
         agent.load("snake_weights.h5")
         print("Loaded existing model weights.")
     except:
-        print("No existing model found, starting fresh training.")
+        print("No existing model found, starting fresh training from za beginning.")
 
     for episode in range(episodes):
         state = game.reset().reshape(1, 10, 10, 1)  # Reshape with channels dimension
@@ -185,8 +185,8 @@ if __name__ == "__main__":
         # Append score for each episode
         scores.append(info["score"])
 
-    plt.ioff()  # Turn off interactive mode
-    plt.show()  # Show the final plot
+    plt.ioff()  # Not interactive model 
+    plt.show()  # plot final
 
     # Save the scores to a file
     with open("scores.json", "w") as f:
