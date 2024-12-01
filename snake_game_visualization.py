@@ -7,6 +7,8 @@ import matplotlib.pyplot as plt
 import json
 from collections import deque
 
+amount = input(int("Give integer input for how many episodes the DQN shall run for")
+
 class SnakeGame:
     def __init__(self, width=10, height=10):
         self.width = width
@@ -152,17 +154,17 @@ class DQNAgent:
         self.model.load_weights(name)
 
 if __name__ == "__main__":
-    plt.ion()  # Turn on interactive mode for plotting
+    plt.ion()  
     game = SnakeGame()
     agent = DQNAgent(state_size=10, action_size=4)
     batch_size = 32
-    episodes = 10  # Training for 1000 episodes
+    episodes = amount
     scores = []
 
     # Try loading the pre-trained model
     try:
         agent.load("snake_weights.h5")
-        print("Loaded existing model weights.")
+        print("Loaded existing model ")
     except:
         print("No existing model found, starting fresh training from za beginning.")
 
