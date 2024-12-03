@@ -7,7 +7,8 @@ import matplotlib.pyplot as plt
 import json
 from collections import deque
 
-amount = input(int("Give integer input for how many episodes the DQN shall run for")
+episodes = int(input("Type a number of how many episodes the DQN should run for: "))
+batch_size = int(input("Type a number that is a power of 2 for the batch size: "))
 
 class SnakeGame:
     def __init__(self, width=10, height=10):
@@ -157,7 +158,6 @@ if __name__ == "__main__":
     plt.ion()  
     game = SnakeGame()
     agent = DQNAgent(state_size=10, action_size=4)
-    batch_size = 32
     episodes = amount
     scores = []
 
