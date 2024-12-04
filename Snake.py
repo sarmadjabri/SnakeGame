@@ -1,5 +1,3 @@
-Edit
-Copy code
 import numpy as np
 import random
 from keras.models import Sequential
