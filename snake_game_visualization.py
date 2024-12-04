@@ -15,7 +15,7 @@ class SnakeGame:
         self.width = width
         self.height = height
         self.snake_position = [(0, 0)]
-        self.direction = (0, 1)
+        self.direction = (0, 1)  # Initial direction: right
         self.food_position = self._generate_food()
         self.score = 0
         self.previous_distance = self._calculate_distance()
@@ -72,8 +72,13 @@ class SnakeGame:
         return self._get_state(), reward, False, {"score": self.score, "reward": reward}
 
     def _update_direction(self, action):
+        # Define possible directions
         directions = [(0, -1), (0, 1), (-1, 0), (1, 0)]
-        self.direction = directions[action]
+        new_direction = directions[action]
+
+        # Prevent reversing direction
+        if (self.direction[0] + new_direction[0] != 0) or (self.direction[1] + new_direction[1] != 0):
+            self.direction = new_direction
 
     def _calculate_movement_reward(self, current_distance):
         # Calculate how much closer we are to the food
@@ -99,9 +104,9 @@ class SnakeGame:
         return self._get_state()
 
     def render(self):
-        plt.imshow(self._get_state(), cmap='hot', interpolation='nearest')
+        plt.imshow(self._get_state(), cmap='hot', interpolation='nearest')  # Corrected colormap
         plt.draw()
-        plt.pause(1)
+        plt.pause(0.1)  # Adjust pause for better visualization
 
 class DQNAgent:
     def __init__(self, state_size, action_size):
@@ -158,15 +163,14 @@ if __name__ == "__main__":
     plt.ion()  
     game = SnakeGame()
     agent = DQNAgent(state_size=10, action_size=4)
-    episodes = amount
     scores = []
 
     # Try loading the pre-trained model
     try:
-        agent.load("snake_weights.h5")
+        agent.load("snake_weights.hdf5")
         print("Loaded existing model ")
     except:
-        print("No existing model found, starting fresh training from za beginning.")
+        print("No existing model found, starting fresh training from the beginning.")
 
     for episode in range(episodes):
         state = game.reset().reshape(1, 10, 10, 1)  # Reshape with channels dimension
@@ -195,4 +199,4 @@ if __name__ == "__main__":
         json.dump(scores, f)
 
     # Save the trained model weights
-    agent.save("snake_weights.h5")
+    agent.save("snake_weights.hdf5")
