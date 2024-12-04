@@ -95,12 +95,12 @@ class SnakeGame:
         return -0.1  # Slight penalty to discourage staying still
 
     def reset(self):
-        self.snake_position = [(0, 0)]
-        self.direction = (0, 1)
-        self.food_position = self._generate_food()
-        self.score = 0
-        self.previous_distance = self._calculate_distance()
-        return self._get state()
+      self.snake_position = [(0, 0)]
+      self.direction = (0, 1)
+      self.food_position = self._generate_food()
+      self.score = 0
+      self.previous_distance = self._calculate_distance()
+      return self._get_state()  # Corrected this line
 
 class DQNAgent:
     def __init__(self, state_size, action_size):
