@@ -1,3 +1,5 @@
+Edit
+Copy code
 import numpy as np
 import random
 from keras.models import Sequential
@@ -6,15 +8,15 @@ from keras.optimizers import Adam
 import json
 from collections import deque
 
-amount = int(input("For how many episodes shall the computer run for: "))
-
+episodes = int(input("Type a number of how many episodes the DQN should run for: "))
+batch_size = int(input("Type a number that is a power of 2 for the batch size: "))
 
 class SnakeGame:
     def __init__(self, width=10, height=10):
         self.width = width
         self.height = height
         self.snake_position = [(0, 0)]
-        self.direction = (0, 1)
+        self.direction = (0, 1)  # Initial direction: right
         self.food_position = self._generate_food()
         self.score = 0
         self.previous_distance = self._calculate_distance()
@@ -62,7 +64,7 @@ class SnakeGame:
         if (new_head_x, new_head_y) == self.food_position:
             self.food_position = self._generate_food()  # Generate new food
             self.score += 1
-            reward = 10  # Reward for eating food
+            reward = 20  # Reward for eating food
         else:
             reward = self._calculate_movement_reward(current_distance)
             self.snake_position.pop()  # Remove tail to maintain length
@@ -71,8 +73,13 @@ class SnakeGame:
         return self._get_state(), reward, False, {"score": self.score, "reward": reward}
 
     def _update_direction(self, action):
+        # Define possible directions
         directions = [(0, -1), (0, 1), (-1, 0), (1, 0)]
-        self.direction = directions[action]
+        new_direction = directions[action]
+
+        # Prevent reversing direction
+        if (self.direction[0] + new_direction[0] != 0) or (self.direction[1] + new_direction[1] != 0):
+            self.direction = new_direction
 
     def _calculate_movement_reward(self, current_distance):
         # Calculate how much closer we are to the food
@@ -95,8 +102,7 @@ class SnakeGame:
         self.food_position = self._generate_food()
         self.score = 0
         self.previous_distance = self._calculate_distance()
-        return self._get_state()
-
+        return self._get state()
 
 class DQNAgent:
     def __init__(self, state_size, action_size):
@@ -152,16 +158,14 @@ class DQNAgent:
 if __name__ == "__main__":
     game = SnakeGame()
     agent = DQNAgent(state_size=10, action_size=4)
-    batch_size = 64
-    episodes = amount  # Training
     scores = []
 
     # Try loading the pre-trained model
     try:
-        agent.load("snake_weights.h5")
-        print("Loaded existing model weights.")
+        agent.load("snake_weights.hdf5")
+        print("Loaded existing model ")
     except:
-        print("No existing model found, starting fresh training.")
+        print("No existing model found, starting fresh training from the beginning.")
 
     for episode in range(episodes):
         state = game.reset().reshape(1, 10, 10, 1)  # Reshape with channels dimension
@@ -186,4 +190,4 @@ if __name__ == "__main__":
         json.dump(scores, f)
 
     # Save the trained model weights
-    agent.save("snake_weights.h5")
+    agent.save("snake_weights.hdf5")
