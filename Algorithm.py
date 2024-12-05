@@ -33,11 +33,12 @@ class Snake:
         dx, dy = direction
         new_head = (self.head()[0] + dx, self.head()[1] + dy)
 
-        # Check for self-collision or wall collision
+        # Ignore collision with self or wall
         if (new_head in self.body or
                 new_head[1] < 0 or new_head[0] < 0 or
                 new_head[0] >= WIDTH or new_head[1] >= HEIGHT):  # Check for walls
-            return False
+            # "Bounce" or "wrap around" the snake
+            new_head = (new_head[0] % WIDTH, new_head[1] % HEIGHT)
 
         # Move the snake
         self.body.insert(0, new_head)
@@ -119,9 +120,9 @@ class Game:
 
             # Move the snake in the calculated direction
             if not self.snake.move(direction):
-                self.running = False  # Game over functiony
+                pass  # Instead of ending the game, simply skip the move
         else:
-            self.running = False  # No path found, game over
+            pass  # If no path found, don't stop the game, just continue
 
         if self.snake.head() == self.food:
             self.snake.grow_snake()
