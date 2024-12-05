@@ -1,7 +1,7 @@
 import numpy as np
 import random
 from keras.models import Sequential
-from keras.layers import Dense, Flatten
+from keras.layers import Dense, Flatten, Conv2D, MaxPooling2D
 from keras.optimizers import Adam
 import matplotlib.pyplot as plt
 import json
@@ -122,11 +122,28 @@ class DQNAgent:
 
     def _build_model(self):
         model = Sequential()
-        model.add(Flatten(input_shape=(self.state_size, self.state_size, 1)))  # Adjust input shape
-        model.add(Dense(64, activation='relu'))
-        model.add(Dense(64, activation='relu'))
-        model.add(Dense(self.action_size, activation='linear'))
+        
+        # Add convolutional layers
+        model.add(Conv2D(32, (3, 3), strides=(1, 1), padding='same', activation='relu', input_shape=(self.state_size, self.state_size, 1)))  # First Conv Layer
+        model.add(MaxPooling2D(pool_size=(2, 2), strides=(2, 2)))  # Pooling layer
+        
+        model.add(Conv2D(64, (3, 3), strides=(1, 1), padding='same', activation='relu'))  # Second Conv Layer
+        model.add(MaxPooling2D(pool_size=(2, 2), strides=(2, 2)))  # Pooling layer
+        
+        model.add(Conv2D(128, (3, 3), strides=(1, 1), padding='same', activation='relu'))  # Third Conv Layer
+        model.add(MaxPooling2D(pool_size=(2, 2), strides=(2, 2)))  # Pooling layer
+
+        # Flatten the output from convolutional layers to feed into fully connected layers
+        model.add(Flatten())
+        
+        # Fully connected layers
+        model.add(Dense(256, activation='relu'))  # First FC layer
+        model.add(Dense(128, activation='relu'))  # Second FC layer
+        model.add(Dense(self.action_size, activation='linear'))  # Output layer for Q-values
+        
+        # Compile the model with Adam optimizer and MSE loss (for regression problem)
         model.compile(loss='mse', optimizer=Adam(learning_rate=self.learning_rate))
+        
         return model
 
     def remember(self, state, action, reward, next_state, done):
@@ -154,10 +171,10 @@ class DQNAgent:
             self.epsilon *= self.epsilon_decay
 
     def save(self, name):
-        self.model.save(name)
+        self.model.save(name)  # Save model as .h5 file
 
     def load(self, name):
-        self.model.load_weights(name)
+        self.model.load_weights(name)  # Load model weights from .h5 file
 
 if __name__ == "__main__":
     plt.ion()  
@@ -167,7 +184,7 @@ if __name__ == "__main__":
 
     # Try loading the pre-trained model
     try:
-        agent.load("snake_weights.hdf5")
+        agent.load("snake_weights.h5")  # Change the file extension to .h5
         print("Loaded existing model ")
     except:
         print("No existing model found, starting fresh training from the beginning.")
@@ -198,5 +215,5 @@ if __name__ == "__main__":
     with open("scores.json", "w") as f:
         json.dump(scores, f)
 
-    # Save the trained model weights
-    agent.save("snake_weights.hdf5")
+    # Save the trained model weights as .h5 file
+    agent.save("snake_weights.h5")  # Save model weights in HDF5 format
