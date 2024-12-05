@@ -62,7 +62,7 @@ class SnakeGame:
         if (new_head_x, new_head_y) == self.food_position:
             self.food_position = self._generate_food()  # Generate new food
             self.score += 1
-            reward = 20  # Reward for eating food
+            reward = 10  # Reward for eating food
         else:
             reward = self._calculate_movement_reward(current_distance)
             self.snake_position.pop()  # Remove tail to maintain length
@@ -95,12 +95,12 @@ class SnakeGame:
         return -0.1  # Slight penalty to discourage staying still
 
     def reset(self):
-      self.snake_position = [(0, 0)]
-      self.direction = (0, 1)
-      self.food_position = self._generate_food()
-      self.score = 0
-      self.previous_distance = self._calculate_distance()
-      return self._get_state()  # Corrected this line
+        self.snake_position = [(0, 0)]
+        self.direction = (0, 1)
+        self.food_position = self._generate_food()
+        self.score = 0
+        self.previous_distance = self._calculate_distance()
+        return self._get_state()
 
 class DQNAgent:
     def __init__(self, state_size, action_size):
@@ -180,6 +180,9 @@ if __name__ == "__main__":
             if len(agent.memory) > batch_size:
                 agent.replay(batch_size)
 
+        # Save the model after each episode to ensure it's preserved
+        agent.save("snake_weights.hdf5")
+
         # Append score for each episode
         scores.append(info["score"])
 
@@ -187,5 +190,5 @@ if __name__ == "__main__":
     with open("scores.json", "w") as f:
         json.dump(scores, f)
 
-    # Save the trained model weights
+    # Save the final trained model weights after all episodes
     agent.save("snake_weights.hdf5")
