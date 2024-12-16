@@ -1,5 +1,5 @@
 # Snake-Game
-In order to run the code to see for yourself just copy the code from the visualization file and it should make a weight file for it to store its attempts(to prevent starting over from scratch.
+In order to run the code to see for yourself just copy the code from the snake visualization file and run it because it will show a board and the DQN network playing the game as its using reinforcement learning
 
 
 
