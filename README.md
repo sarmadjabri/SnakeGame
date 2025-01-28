@@ -1,10 +1,12 @@
 # Snake-Game
 In order to run the code to see for yourself just copy the code from the snake visualization file and run it because it will show a board and the DQN network playing the game as its using reinforcement learning
 
+This will be laggy and CPU intensive as you are training the model.
 
+If you want to see an algorithm which is more effective play this game then try using the snakebot.py file and run it in pygame trinket(https://trinket.io/features/pygame)
+Copy paste the code from that file and run it inside and it should play the game fluently.
 
 Recreation of google snake and a Deep Q Neural network to beat google snake.
-Source code is not fully mine as I did get help from numerous websites.
 
 The algorithm to beat snake game is a DQN learning neural network of which plays the game several times and saves its attempts.
 The Deep Q neural network saves its attempts to disk(hopefully in due time).
@@ -15,7 +17,7 @@ https://keras.io
 https://docs.python.org
 https://github.com/dennybritz/reinforcement-learning
 https://python-machinelearning.github.io
-
+these are the websites I used to make this
 
 Anyway feel free to run it but a good thing to watch out for CPU usage. Thanks
 
