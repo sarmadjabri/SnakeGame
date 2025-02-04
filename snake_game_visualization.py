@@ -7,6 +7,7 @@ import matplotlib.pyplot as plt
 import json
 from collections import deque
 
+# Get user inputs for training parameters
 episodes = int(input("Type a number of how many episodes the DQN should run for: "))
 batch_size = int(input("Type a number that is a power of 2 for the batch size: "))
 
@@ -32,7 +33,7 @@ class SnakeGame:
         for x, y in self.snake_position:
             state[x, y] = 1  # Snake body
         state[self.food_position] = 2  # Food
-        return state / 2.0  # Normalize between 0 and 1
+        return state
 
     def _calculate_distance(self):
         head_x, head_y = self.snake_position[0]
@@ -45,25 +46,28 @@ class SnakeGame:
         new_head_x = head_x + self.direction[0]
         new_head_y = head_y + self.direction[1]
 
-        # Check for wall collision
+        # Check for wall collision (no wrapping)
         if new_head_x < 0 or new_head_x >= self.width or new_head_y < 0 or new_head_y >= self.height:
             return self._get_state(), -10, True, {"score": self.score, "reward": -10}
 
+        # Update snake's new head position
         self.snake_position.insert(0, (new_head_x, new_head_y))
+
+        # Calculate current distance before checking for collisions or food
         current_distance = self._calculate_distance()
 
-        # Check for collisions with body
+        # Check for collisions with snake's body
         if (new_head_x, new_head_y) in self.snake_position[1:]:
             return self._get_state(), -10, True, {"score": self.score, "reward": -10}
 
         # Check for food
         if (new_head_x, new_head_y) == self.food_position:
-            self.food_position = self._generate_food()
+            self.food_position = self._generate_food()  # Generate new food
             self.score += 1
-            reward = 10
+            reward = 10  # Reward for eating food
         else:
             reward = self._calculate_movement_reward(current_distance)
-            self.snake_position.pop()
+            self.snake_position.pop()  # Remove tail to maintain length
 
         self.previous_distance = current_distance
         return self._get_state(), reward, False, {"score": self.score, "reward": reward}
@@ -71,14 +75,16 @@ class SnakeGame:
     def _update_direction(self, action):
         directions = [(0, -1), (0, 1), (-1, 0), (1, 0)]
         new_direction = directions[action]
-
-        # Prevent reversing direction
-        if (self.direction[0] + new_direction[0] != 0) and (self.direction[1] + new_direction[1] != 0):
+        if (self.direction[0] + new_direction[0] != 0) or (self.direction[1] + new_direction[1] != 0):
             self.direction = new_direction
 
     def _calculate_movement_reward(self, current_distance):
         distance_change = self.previous_distance - current_distance
-        return max(min(distance_change, 1), -1)  # Clip rewards to [-1, 1]
+        if distance_change > 0:
+            return distance_change  # Positive reward
+        elif distance_change < 0:
+            return distance_change  # Negative reward
+        return -0.1  # Small penalty
 
     def reset(self):
         self.snake_position = [(0, 0)]
@@ -97,7 +103,7 @@ class DQNAgent:
     def __init__(self, state_size, action_size):
         self.state_size = state_size
         self.action_size = action_size
-        self.memory = deque(maxlen=5000)  # Increased memory for stability
+        self.memory = deque(maxlen=2000)
         self.gamma = 0.95
         self.epsilon = 1
         self.epsilon_min = 0.01
@@ -107,7 +113,7 @@ class DQNAgent:
 
     def _build_model(self):
         model = Sequential()
-        model.add(Conv2D(32, (3, 3), activation='relu', input_shape=(self.state_size, self.state_size, 4)))
+        model.add(Conv2D(32, (3, 3), activation='relu', input_shape=(self.state_size, self.state_size, 1)))
         model.add(MaxPooling2D((2, 2)))
         model.add(Flatten())
         model.add(Dense(128, activation='relu'))
@@ -121,8 +127,8 @@ class DQNAgent:
     def act(self, state):
         if np.random.rand() <= self.epsilon:
             return random.randrange(self.action_size)
-        state = np.expand_dims(state, axis=0)  # Add batch dimension
-        act_values = self.model.predict(state, verbose=0)
+        state = state.reshape(1, self.state_size, self.state_size, 1)
+        act_values = self.model.predict(state)
         return np.argmax(act_values[0])
 
     def replay(self, batch_size):
@@ -130,12 +136,10 @@ class DQNAgent:
             return
         minibatch = random.sample(self.memory, batch_size)
         for state, action, reward, next_state, done in minibatch:
-            target = reward
-            if not done:
-                target += self.gamma * np.amax(self.model.predict(np.expand_dims(next_state, axis=0), verbose=0)[0])
-            target_f = self.model.predict(np.expand_dims(state, axis=0), verbose=0)
+            target = reward if done else reward + self.gamma * np.amax(self.model.predict(next_state)[0])
+            target_f = self.model.predict(state)
             target_f[0][action] = target
-            self.model.fit(np.expand_dims(state, axis=0), target_f, epochs=1, verbose=0)
+            self.model.fit(state, target_f, epochs=1, verbose=0)
         if self.epsilon > self.epsilon_min:
             self.epsilon *= self.epsilon_decay
 
@@ -153,21 +157,21 @@ if __name__ == "__main__":
 
     try:
         agent.load("snake_weights.h5")
-        print("Loaded existing model")
+        print("Loaded existing model.")
     except:
-        print("No existing model found, starting fresh training.")
+        print("No existing model found. Starting fresh training.")
 
     for episode in range(episodes):
-        state = np.stack([game.reset()] * 4, axis=-1)  # Use frame stacking
+        state = game.reset().reshape(1, 10, 10, 1)
         for time in range(1000):
             action = agent.act(state)
             next_state, reward, done, info = game.step(action)
-            next_state = np.append(state[:, :, 1:], np.expand_dims(next_state, axis=-1), axis=-1)
+            print(f"Episode {episode} | Time: {time} | Score: {info['score']} | Reward: {info['reward']}")
+            next_state = next_state.reshape(1, 10, 10, 1)
             agent.remember(state, action, reward, next_state, done)
             state = next_state
             game.render()
             if done:
-                print(f"Episode {episode} finished after {time} timesteps with score {info['score']}")
                 break
             if len(agent.memory) > batch_size:
                 agent.replay(batch_size)
@@ -176,8 +180,6 @@ if __name__ == "__main__":
 
     plt.ioff()
     plt.show()
-
     with open("scores.json", "w") as f:
         json.dump(scores, f)
-
     agent.save("snake_weights.h5")
