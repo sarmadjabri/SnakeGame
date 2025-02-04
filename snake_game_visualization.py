@@ -32,7 +32,7 @@ class SnakeGame:
         for x, y in self.snake_position:
             state[x, y] = 1  # Snake body
         state[self.food_position] = 2  # Food
-        return state
+        return state / 2.0  # Normalize between 0 and 1
 
     def _calculate_distance(self):
         head_x, head_y = self.snake_position[0]
@@ -45,55 +45,40 @@ class SnakeGame:
         new_head_x = head_x + self.direction[0]
         new_head_y = head_y + self.direction[1]
 
-        # Check for wall collision (no wrapping)
+        # Check for wall collision
         if new_head_x < 0 or new_head_x >= self.width or new_head_y < 0 or new_head_y >= self.height:
             return self._get_state(), -10, True, {"score": self.score, "reward": -10}
 
-        # Update snake's new head position
         self.snake_position.insert(0, (new_head_x, new_head_y))
-
-        # Calculate current distance before checking for collisions or food
         current_distance = self._calculate_distance()
 
-        # Check for collisions with snake's body
+        # Check for collisions with body
         if (new_head_x, new_head_y) in self.snake_position[1:]:
             return self._get_state(), -10, True, {"score": self.score, "reward": -10}
 
         # Check for food
         if (new_head_x, new_head_y) == self.food_position:
-            self.food_position = self._generate_food()  # Generate new food
+            self.food_position = self._generate_food()
             self.score += 1
-            reward = 10  # Reward for eating food
+            reward = 10
         else:
             reward = self._calculate_movement_reward(current_distance)
-            self.snake_position.pop()  # Remove tail to maintain length
+            self.snake_position.pop()
 
         self.previous_distance = current_distance
         return self._get_state(), reward, False, {"score": self.score, "reward": reward}
 
     def _update_direction(self, action):
-        # Define possible directions
         directions = [(0, -1), (0, 1), (-1, 0), (1, 0)]
         new_direction = directions[action]
 
         # Prevent reversing direction
-        if (self.direction[0] + new_direction[0] != 0) or (self.direction[1] + new_direction[1] != 0):
+        if (self.direction[0] + new_direction[0] != 0) and (self.direction[1] + new_direction[1] != 0):
             self.direction = new_direction
 
     def _calculate_movement_reward(self, current_distance):
-        # Calculate how much closer we are to the food
         distance_change = self.previous_distance - current_distance
-
-        # Positive reward if getting closer to the food
-        if distance_change > 0:
-            return distance_change  # Reward proportional to the distance change (positive)
-
-        # Negative reward if moving away from the food
-        elif distance_change < 0:
-            return distance_change  # Penalty proportional to the distance increase (negative)
-
-        # Small penalty if no change in distance
-        return -0.1  # Slight penalty to discourage staying still
+        return max(min(distance_change, 1), -1)  # Clip rewards to [-1, 1]
 
     def reset(self):
         self.snake_position = [(0, 0)]
@@ -104,15 +89,15 @@ class SnakeGame:
         return self._get_state()
 
     def render(self):
-        plt.imshow(self._get_state(), cmap='hot', interpolation='nearest')  # Corrected colormap
+        plt.imshow(self._get_state(), cmap='hot', interpolation='nearest')
         plt.draw()
-        plt.pause(0.1)  # Adjust pause for better visualization
+        plt.pause(0.1)
 
 class DQNAgent:
     def __init__(self, state_size, action_size):
         self.state_size = state_size
         self.action_size = action_size
-        self.memory = deque(maxlen=2000)  # Use deque for memory efficiency
+        self.memory = deque(maxlen=5000)  # Increased memory for stability
         self.gamma = 0.95
         self.epsilon = 1
         self.epsilon_min = 0.01
@@ -122,28 +107,12 @@ class DQNAgent:
 
     def _build_model(self):
         model = Sequential()
-        
-        # Add convolutional layers
-        model.add(Conv2D(32, (3, 3), strides=(1, 1), padding='same', activation='relu', input_shape=(self.state_size, self.state_size, 1)))  # First Conv Layer
-        model.add(MaxPooling2D(pool_size=(2, 2), strides=(2, 2)))  # Pooling layer
-        
-        model.add(Conv2D(64, (3, 3), strides=(1, 1), padding='same', activation='relu'))  # Second Conv Layer
-        model.add(MaxPooling2D(pool_size=(2, 2), strides=(2, 2)))  # Pooling layer
-        
-        model.add(Conv2D(128, (3, 3), strides=(1, 1), padding='same', activation='relu'))  # Third Conv Layer
-        model.add(MaxPooling2D(pool_size=(2, 2), strides=(2, 2)))  # Pooling layer
-
-        # Flatten the output from convolutional layers to feed into fully connected layers
+        model.add(Conv2D(32, (3, 3), activation='relu', input_shape=(self.state_size, self.state_size, 4)))
+        model.add(MaxPooling2D((2, 2)))
         model.add(Flatten())
-        
-        # Fully connected layers
-        model.add(Dense(256, activation='relu'))  # First FC layer
-        model.add(Dense(128, activation='relu'))  # Second FC layer
-        model.add(Dense(self.action_size, activation='linear'))  # Output layer for Q-values
-        
-        # Compile the model with Adam optimizer and MSE loss (for regression problem)
+        model.add(Dense(128, activation='relu'))
+        model.add(Dense(self.action_size, activation='linear'))
         model.compile(loss='mse', optimizer=Adam(learning_rate=self.learning_rate))
-        
         return model
 
     def remember(self, state, action, reward, next_state, done):
@@ -152,8 +121,8 @@ class DQNAgent:
     def act(self, state):
         if np.random.rand() <= self.epsilon:
             return random.randrange(self.action_size)
-        state = state.reshape(1, self.state_size, self.state_size, 1)  # Reshape for prediction
-        act_values = self.model.predict(state)
+        state = np.expand_dims(state, axis=0)  # Add batch dimension
+        act_values = self.model.predict(state, verbose=0)
         return np.argmax(act_values[0])
 
     def replay(self, batch_size):
@@ -163,57 +132,52 @@ class DQNAgent:
         for state, action, reward, next_state, done in minibatch:
             target = reward
             if not done:
-                target += self.gamma * np.amax(self.model.predict(next_state)[0])
-            target_f = self.model.predict(state)
+                target += self.gamma * np.amax(self.model.predict(np.expand_dims(next_state, axis=0), verbose=0)[0])
+            target_f = self.model.predict(np.expand_dims(state, axis=0), verbose=0)
             target_f[0][action] = target
-            self.model.fit(state, target_f, epochs=1, verbose=0)
+            self.model.fit(np.expand_dims(state, axis=0), target_f, epochs=1, verbose=0)
         if self.epsilon > self.epsilon_min:
             self.epsilon *= self.epsilon_decay
 
     def save(self, name):
-        self.model.save(name)  # Save model as .h5 file
+        self.model.save(name)
 
     def load(self, name):
-        self.model.load_weights(name)  # Load model weights from .h5 file
+        self.model.load_weights(name)
 
 if __name__ == "__main__":
-    plt.ion()  
+    plt.ion()
     game = SnakeGame()
     agent = DQNAgent(state_size=10, action_size=4)
     scores = []
 
-    # Try loading the pre-trained model
     try:
-        agent.load("snake_weights.h5")  # Change the file extension to .h5
-        print("Loaded existing model ")
+        agent.load("snake_weights.h5")
+        print("Loaded existing model")
     except:
-        print("No existing model found, starting fresh training from the beginning.")
+        print("No existing model found, starting fresh training.")
 
     for episode in range(episodes):
-        state = game.reset().reshape(1, 10, 10, 1)  # Reshape with channels dimension
+        state = np.stack([game.reset()] * 4, axis=-1)  # Use frame stacking
         for time in range(1000):
             action = agent.act(state)
             next_state, reward, done, info = game.step(action)
-            print("Episode: {} | Score: {}, Reward: {}".format(episode, info["score"], info["reward"]))
-            next_state = next_state.reshape(1, 10, 10, 1)  # Reshape with channels dimension
+            next_state = np.append(state[:, :, 1:], np.expand_dims(next_state, axis=-1), axis=-1)
             agent.remember(state, action, reward, next_state, done)
             state = next_state
             game.render()
             if done:
-                print("Episode {} finished after {} timesteps".format(episode, time))
+                print(f"Episode {episode} finished after {time} timesteps with score {info['score']}")
                 break
             if len(agent.memory) > batch_size:
                 agent.replay(batch_size)
 
-        # Append score for each episode
         scores.append(info["score"])
 
-    plt.ioff()  # Not interactive model 
-    plt.show()  # plot final
+    plt.ioff()
+    plt.show()
 
-    # Save the scores to a file
     with open("scores.json", "w") as f:
         json.dump(scores, f)
 
-    # Save the trained model weights as .h5 file
-    agent.save("snake_weights.h5")  # Save model weights in HDF5 format
+    agent.save("snake_weights.h5")
