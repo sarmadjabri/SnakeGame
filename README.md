@@ -17,5 +17,5 @@ Please note that if you run snake_visualization.py, remember that it saves all o
 
 The self.epsilon statement controls the exploitation exploration as numbers closer to 1 leeds to more exploration and numbers closer to zero lead to more exploitation.
 
-Thank you for spending your time reading this useless file.
+Thank you for spending your time reading this useless file and please contribute if you find this interesting.
 
