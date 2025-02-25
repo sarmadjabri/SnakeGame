@@ -57,7 +57,7 @@ class SnakeGame:
         if (new_head_x, new_head_y) == self.food_position:
             self.food_position = self._generate_food()  # Generate new food
             self.score += 1
-            reward = 10  # Reward for eating food
+            reward = 40  # Reward for eating food
         else:
             reward = self._calculate_movement_reward()
             self.snake_position.pop()  # Remove tail to maintain length
@@ -78,10 +78,10 @@ class SnakeGame:
         self.previous_distance = current_distance
 
         if distance_change > 0:
-            return 2    # Reward for moving closer to food
+            return +1 # Reward for moving closer to food
         elif distance_change < 0:
-            return -0.5   # Penalty for moving away from food
-        return -0.1     # Small penalty to discourage inaction
+            return -1  # Penalty for moving away from food
+        return -0.1 # Small penalty to discourage inaction
 
     def reset(self):
         # Start snake at a random position for more variety
@@ -114,7 +114,7 @@ class DDQNAgent:
         self.update_target_model()
 
         # Frequency (in episodes) to update the target network
-        self.update_target_freq = 5
+        self.update_target_freq = 1
 
     def _build_model(self):
         model = Sequential([
